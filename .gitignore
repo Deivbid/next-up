@@ -1,0 +1,22 @@
+node_modules/
+dist/
+.local/
+.wrangler/
+.dev.vars
+.env*
+!.env.example
+playwright-report/
+test-results/
+.DS_Store
+*.tsbuildinfo
+
+# Personal tooling and private development artifacts
+.agents/
+.codex/
+.dev.vars.*
+!.dev.vars.example
+.dev.bars
+public/concepts/
+design/prompts.json
+design/tooling-manifest.json
+design/references/
