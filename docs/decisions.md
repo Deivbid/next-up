@@ -28,3 +28,18 @@ Source: David's approved first-version plan and visual approval, September 10, 2
 ## Validation boundary
 
 The local UI, persistence, backups, offline/update behavior and Worker with mocked providers are implemented and tested. Live IGDB title search has been verified. Steam account permissions, secure-cookie behavior with an HTTPS origin and real-phone installation remain acceptance checks before claiming those capabilities or deploying the app. The source repository may be published as a prototype with these limitations disclosed.
+
+## Steam picker refinement — September 10, 2026
+
+David reported successful live Steam sign-in and import, then requested covers and infinite scrolling. This is user-reported acceptance, separate from the mocked-provider browser tests.
+
+- Show an alphabetical cover grid, search, selection count and existing-game badges; progressively append 24 results as the scroll container approaches its end. Images use native lazy loading and the existing fallback.
+- The Worker still fetches and validates the full list once per explicit preview. Scrolling only reveals local results; it does not make more API requests. Steam collections remain excluded: the documented GetOwnedGames integration provides games, not the user's client collections.
+- Search and the visible limit belong to the mounted picker and reset when it closes. Selection belongs to the import dialog, survives searches/scrolling, and resets on a fresh preview. The observer disconnects on query changes, pagination and unmount; the button remains usable without IntersectionObserver.
+- Reuse the existing Steam artwork URL for preview and persistence. No provider/schema/storage changes, dependencies, account access, publishing or automatic deployment in this refinement.
+- Evidence: `tests/browser/steam.spec.ts`, existing atomic-import unit tests and local desktop/mobile screenshots. Covers are best-effort; missing artwork never blocks selection or import.
+
+
+## Main publication — September 10, 2026
+
+David requested pushing the latest changes directly to main. Include the existing, user-created `wrangler.production.jsonc` (public origin, asset routing and existing AUTH binding/migration; no secrets), document the manual deployment and correct the README's outdated undeployed status. This supersedes the local-only publication exclusion above; deploying a new build is still a separate manual step. Browser persistence and the Steam/provider contract are unchanged.

@@ -25,4 +25,6 @@ npm run preview
 
 Open **http://127.0.0.1:3030**. [Setup & checks](docs/development.md) · [API keys](docs/integrations.md) · [Validation](docs/validation.md)
 
-**Prototype:** no cloud sync. Steam import is experimental and still needs live HTTPS login testing. No paid AI APIs. No app deployment yet.
+[Try Next Up](https://next-up.deivbid.workers.dev/) 🎮
+
+**Prototype:** no cloud sync or paid AI APIs. Steam import works on the HTTPS app; your library stays in this browser. Export a JSON backup to move it to another device.

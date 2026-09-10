@@ -1,6 +1,10 @@
 import { type SteamGame, steamLibrarySchema } from "../../shared/contracts";
 import { newGame } from "../domain/game";
 import type { LibraryDB } from "./db";
+export function steamCoverUrl(steamId: number) {
+  return `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${steamId}/library_600x900.jpg`;
+}
+
 export async function importSteam(database: LibraryDB, selected: SteamGame[]) {
   const { games } = steamLibrarySchema.parse({ games: selected });
   await database.transaction("rw", database.games, async () => {
@@ -15,7 +19,7 @@ export async function importSteam(database: LibraryDB, selected: SteamGame[]) {
         title: item.title,
         steamId: item.steamId,
         devices: ["PC"],
-        cover: `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${item.steamId}/library_600x900.jpg`,
+        cover: steamCoverUrl(item.steamId),
       });
     }
   });

@@ -638,25 +638,133 @@
   flex-direction: column;
   gap: 16px;
 }
-.steam-list {
+.steam-import {
+  width: min(900px, calc(100% - 24px));
+  max-width: none;
+  max-height: calc(100dvh - 24px);
   display: flex;
   flex-direction: column;
-  max-height: 50dvh;
-  overflow: auto;
-}
-.steam-list label {
-  display: flex;
   gap: 16px;
-  align-items: center;
-  min-height: 56px;
-  padding: 12px;
-  border-bottom: 1px solid var(--border);
+  padding: 24px;
+  overflow: hidden;
 }
-.steam-list input {
-  width: 20px;
-  height: 20px;
-  accent-color: var(--primary);
+.steam-import [data-slot="dialog-header"] {
+  text-align: left;
+  padding-right: 28px;
   flex-shrink: 0;
+}
+.steam-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+.steam-picker > [data-slot="field"],
+.steam-results-count {
+  flex-shrink: 0;
+}
+.steam-results-count {
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+.steam-scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  min-height: 0;
+  max-height: 52dvh;
+  padding: 4px;
+}
+.steam-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.steam-game {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px;
+  min-width: 0;
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
+  cursor: pointer;
+  transition:
+    border-color 160ms ease-out,
+    background-color 160ms ease-out;
+}
+.steam-game[data-selected="true"] {
+  border-color: var(--primary);
+  background: var(--accent);
+}
+.steam-game:focus-within {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.steam-art {
+  width: 100%;
+}
+.steam-game input {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 24px;
+  height: 24px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+.steam-game-title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.steam-game [data-slot="badge"] {
+  white-space: normal;
+  margin-top: auto;
+}
+.steam-game .cover-fallback {
+  padding: 8px;
+}
+.steam-game .cover-fallback span {
+  display: none;
+}
+.steam-more {
+  width: 100%;
+  margin-top: 16px;
+}
+.steam-empty {
+  padding: 24px 0;
+  color: var(--muted-foreground);
+}
+.steam-import-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.steam-import-actions > :first-child {
+  flex: 1;
+}
+@media (max-width: 600px) {
+  .steam-import {
+    padding: 20px 16px;
+    gap: 12px;
+  }
+  .steam-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+}
+@media (max-height: 500px) {
+  .steam-import {
+    overflow-y: auto;
+  }
+  .steam-picker {
+    flex-shrink: 0;
+  }
 }
 .page-enter {
   animation: enter 200ms ease-out;

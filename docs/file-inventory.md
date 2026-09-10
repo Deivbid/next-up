@@ -1,8 +1,8 @@
 # Public source inventory
 
-63 tracked files. The initial prototype PR adds the implementation to the README-only main branch.
+66 source files in this inventory. The initial prototype is merged into main; this update adds the visual Steam picker and records the existing production configuration.
 
-## Root configuration and documentation (17)
+## Root configuration and documentation (18)
 
 - `.dev.vars.example`
 - `.gitignore`
@@ -21,6 +21,7 @@
 - `vite.config.ts`
 - `vitest.config.ts`
 - `wrangler.jsonc`
+- `wrangler.production.jsonc`
 
 ## design (1)
 
@@ -49,11 +50,12 @@
 
 - `shared/contracts.ts`
 
-## src (27)
+## src (28)
 
 - `src/App.tsx`
 - `src/components/Cover.tsx`
 - `src/components/GameEditor.tsx`
+- `src/components/SteamGamePicker.tsx`
 - `src/components/ui/alert.tsx`
 - `src/components/ui/badge.tsx`
 - `src/components/ui/button.tsx`
@@ -79,10 +81,11 @@
 - `src/style.css`
 - `src/vite-env.d.ts`
 
-## tests (5)
+## tests (6)
 
 - `tests/browser/app.spec.ts`
 - `tests/browser/catalog.spec.ts`
+- `tests/browser/steam.spec.ts`
 - `tests/pwa/offline.spec.ts`
 - `tests/unit/library.test.ts`
 - `tests/unit/providers.test.ts`

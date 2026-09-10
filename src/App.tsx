@@ -69,6 +69,7 @@ import {
 } from "./components/ui/dialog";
 import { Cover } from "./components/Cover";
 import { GameEditor } from "./components/GameEditor";
+import { SteamGamePicker } from "./components/SteamGamePicker";
 
 function currentPage() {
   const page = location.hash.slice(1);
@@ -97,8 +98,6 @@ export default function App() {
   const [status, setStatus] = useState("");
   const [query, setQuery] = useState("");
   const [libraryLimit, setLibraryLimit] = useState(48);
-  const [steamLimit, setSteamLimit] = useState(48);
-  const [steamQuery, setSteamQuery] = useState("");
   const [backup, setBackup] = useState<Backup | null>(null);
   const [erase, setErase] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -238,8 +237,6 @@ export default function App() {
       if (!r.ok) throw new Error();
       const parsed = steamLibrarySchema.parse(await r.json());
       setSteamGames(parsed.games);
-      setSteamLimit(48);
-      setSteamQuery("");
       setSelected([]);
     } catch {
       setError(
@@ -950,92 +947,61 @@ export default function App() {
           if (!open && !busy) setSteamGames(null);
         }}
       >
-        <DialogContent className="editor">
+        <DialogContent className="steam-import">
           <DialogHeader>
             <DialogTitle>Choose what comes with you.</DialogTitle>
             <DialogDescription>
-              {selected.length} selected. Existing games keep your edits. Steam
-              Deck compatibility is not checked.
+              Existing games keep your edits. Steam collections aren’t included,
+              and Steam Deck compatibility is not checked.
             </DialogDescription>
           </DialogHeader>
-          <Field>
-            <FieldLabel htmlFor="steam-search">Find a Steam game</FieldLabel>
-            <Input
-              id="steam-search"
-              value={steamQuery}
-              onChange={(e) => {
-                setSteamQuery(e.target.value);
-                setSteamLimit(48);
-              }}
-              placeholder="Search your Steam games…"
-            />
-          </Field>
-          <div className="steam-list">
-            {steamGames?.length === 0 ? (
-              <p>No games were returned. Nothing will be imported.</p>
-            ) : (
-              steamGames
-                ?.filter((g) =>
-                  g.title.toLowerCase().includes(steamQuery.toLowerCase()),
+          {steamGames && (
+            <SteamGamePicker
+              games={steamGames}
+              existingIds={
+                games?.flatMap((g) => (g.steamId ? [g.steamId] : [])) ?? []
+              }
+              selected={selected}
+              disabled={busy}
+              onToggle={(id) =>
+                setSelected((ids) =>
+                  ids.includes(id)
+                    ? ids.filter((value) => value !== id)
+                    : [...ids, id],
                 )
-                .slice(0, steamLimit)
-                .map((g) => (
-                  <label key={g.steamId}>
-                    <input
-                      type="checkbox"
-                      checked={selected.includes(g.steamId)}
-                      onChange={(e) =>
-                        setSelected((ids) =>
-                          e.target.checked
-                            ? [...ids, g.steamId]
-                            : ids.filter((id) => id !== g.steamId),
-                        )
-                      }
-                    />
-                    <span>{g.title}</span>
-                    {games?.some(
-                      (existing) => existing.steamId === g.steamId,
-                    ) && <Badge variant="secondary">Already added</Badge>}
-                  </label>
-                ))
-            )}
-          </div>
-          {(steamGames?.filter((g) =>
-            g.title.toLowerCase().includes(steamQuery.toLowerCase()),
-          ).length ?? 0) > steamLimit && (
+              }
+            />
+          )}
+          <div className="steam-import-actions">
+            <Button
+              disabled={busy || !selected.length}
+              onClick={async () => {
+                if (
+                  await action(
+                    () =>
+                      importSteam(
+                        db,
+                        steamGames?.filter((g) =>
+                          selected.includes(g.steamId),
+                        ) ?? [],
+                      ),
+                    "Selected games imported. Existing edits preserved.",
+                  )
+                )
+                  setSteamGames(null);
+              }}
+            >
+              Import {selected.length}{" "}
+              {selected.length === 1 ? "game" : "games"}
+            </Button>
             <Button
               variant="outline"
-              onClick={() => setSteamLimit((n) => n + 48)}
+              disabled={busy}
+              onClick={() => setSteamGames(null)}
             >
-              Show more Steam games
+              Cancel
             </Button>
-          )}
-          <Button
-            disabled={busy || !selected.length}
-            onClick={async () => {
-              if (
-                await action(
-                  () =>
-                    importSteam(
-                      db,
-                      steamGames?.filter((g) => selected.includes(g.steamId)) ??
-                        [],
-                    ),
-                  "Selected games imported. Existing edits preserved.",
-                )
-              )
-                setSteamGames(null);
-            }}
-          >
-            Import {selected.length} games
-          </Button>
-          <Button
-            variant="outline"
-            disabled={busy}
-            onClick={() => setSteamGames(null)}
-          >
-            Cancel
-          </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </>

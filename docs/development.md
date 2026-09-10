@@ -33,3 +33,20 @@ npm --userconfig=.local/empty-npmrc --globalconfig=/dev/null run test:pwa
 ```
 
 `check` runs both TypeScript targets, lint, unit tests, Worker integration checks and the production build. Browser tests use a separate browser profile. PWA tests temporarily change the generated `dist/sw.js` to exercise an update and restore it afterward; run them without rebuilding concurrently.
+
+
+## Existing Cloudflare deployment
+
+The app and API share `https://next-up.deivbid.workers.dev`, configured in `wrangler.production.jsonc`. `dist` contains static assets; `/api/*` runs the Worker. `APP_ORIGIN` must match the public origin exactly. The AUTH binding and v1 migration match the already-deployed Durable Object.
+
+After signing into your personal Cloudflare account with Wrangler, publish changes manually:
+
+```sh
+npm --userconfig=.local/empty-npmrc --globalconfig=/dev/null run build
+printf 'concepts/\n' > dist/.assetsignore
+npm --userconfig=.local/empty-npmrc --globalconfig=/dev/null exec -- wrangler deploy --config wrangler.production.jsonc
+```
+
+The asset exclusion keeps local-only design references out of the upload. The production config contains no secrets: configure `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET` and `STEAM_WEB_API_KEY` as Worker secrets. Git pushes do not deploy automatically in this setup.
+
+Libraries belong to the browser profile and origin. The `#today`, `#library` and `#settings` views share storage; another PC, browser profile, localhost or a different hostname does not. Use Settings → export/import to transfer a backup; restoring replaces the destination library after confirmation. Publishing a new build at the same origin does not itself clear IndexedDB.

@@ -18,7 +18,7 @@ The Worker requests a client-credentials token, then calls `https://api.igdb.com
 
 1. Get a personal Web API key from [Steam's developer page](https://steamcommunity.com/dev).
 2. Set `STEAM_WEB_API_KEY` in the ignored `.dev.vars` file.
-3. **Steam login stays disabled on the current HTTP preview.** Before testing it, configure an HTTPS app origin in `APP_ORIGIN`, with `/api/*` routed to the Worker on the same origin. We will set up that origin together; no hosting or tunnel has been purchased or published automatically.
+3. **Steam login stays disabled on the current HTTP preview.** Before testing it, configure an HTTPS app origin in `APP_ORIGIN`, with `/api/*` routed to the Worker on the same origin. The existing deployment uses `https://next-up.deivbid.workers.dev`; see the manual deployment instructions in [Development](development.md).
 4. Use **Connect Steam** in Settings, sign in on Steam's official page, then select games to import.
 5. Check a repeated import after editing a game: its title, status, notes, devices and categories must remain unchanged.
 
@@ -28,7 +28,7 @@ A successful identity login does not grant access to a private game library. Get
 
 ## Verified boundaries
 
-Consumer: this browser app. Provider adapter: `worker/index.ts` / `worker/providers.ts`. Third-party source code is not available; official docs are the upstream source of truth. Steam's XRDS discovery response was also inspected and matched its documented OpenID endpoint. Live IGDB title search was verified locally. Actual Steam login and library responses have not been verified.
+Consumer: this browser app. Provider adapter: `worker/index.ts` / `worker/providers.ts`. Third-party source code is not available; official docs are the upstream source of truth. Steam's XRDS discovery response was also inspected and matched its documented OpenID endpoint. Live IGDB title search was verified locally. David reported successful live Steam sign-in and importing on September 10, 2026. Public/private/empty-library edge cases remain covered with fixtures rather than a full live-account matrix.
 
 | Route | Behavior |
 | --- | --- |
