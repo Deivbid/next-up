@@ -1,0 +1,11 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "next-up-api",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-09-10",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": { "APP_ORIGIN": "http://127.0.0.1:3030" },
+  "durable_objects": { "bindings": [{ "name": "AUTH", "class_name": "IntegrationState" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["IntegrationState"] }],
+  "observability": { "enabled": false }
+}
