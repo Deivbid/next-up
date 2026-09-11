@@ -1,6 +1,7 @@
 import { it, expect, vi, afterEach } from "vitest";
 import {
   mapCatalog,
+  mapArtwork,
   mapSteam,
   validateAssertion,
   validateDiscovery,
@@ -94,4 +95,29 @@ it("surfaces provider rate limiting without automatic retries", async () => {
     upstream("https://api.igdb.com/v4/games", {}, AbortSignal.timeout(1000)),
   ).rejects.toMatchObject({ status: 429, retryAfter: "15" });
   expect(fetcher).toHaveBeenCalledTimes(1);
+});
+
+it("chooses landscape artwork, then screenshots, never a portrait or undersized image", () => {
+  const portrait = { image_id: "portrait", width: 1200, height: 1800 };
+  const wide = { image_id: "wide", width: 1920, height: 1080 };
+  expect(
+    mapArtwork([
+      {
+        artworks: [portrait, wide],
+        screenshots: [{ ...wide, image_id: "screen" }],
+      },
+    ]).url,
+  ).toContain("/t_1080p/wide.jpg");
+  expect(
+    mapArtwork([{ artworks: [portrait], screenshots: [wide] }]).url,
+  ).toContain("/wide.jpg");
+  expect(
+    mapArtwork([
+      { artworks: [{ ...wide, width: 600, height: 300 }, portrait] },
+    ]),
+  ).toEqual({ url: null });
+  expect(mapArtwork([])).toEqual({ url: null });
+  expect(() =>
+    mapArtwork([{ artworks: [{ ...wide, image_id: "../../secret" }] }]),
+  ).toThrow();
 });

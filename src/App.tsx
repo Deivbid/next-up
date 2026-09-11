@@ -73,6 +73,7 @@ import {
   DialogDescription,
 } from "./components/ui/dialog";
 import { BrandLoader } from "./components/BrandLoader";
+import { HeroArtwork } from "./components/HeroArtwork";
 import { Cover } from "./components/Cover";
 import { GameEditor } from "./components/GameEditor";
 import { SteamGamePicker } from "./components/SteamGamePicker";
@@ -422,7 +423,10 @@ export default function App({
                           />
                         </Button>
                       </div>
-                      <Cover game={current[0]} eager />
+                      <HeroArtwork
+                        key={`${current[0].id}:${current[0].steamId}:${current[0].igdbId}:${current[0].cover}`}
+                        game={current[0]}
+                      />
                     </section>
                   )}
                   <section

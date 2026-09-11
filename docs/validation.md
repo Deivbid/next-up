@@ -108,3 +108,27 @@ A read-only check against the configured hosted project confirmed Google enabled
 Moved email, refresh and logout into Settings → Profile. Save failures and legacy-import notices remain visible across views; failed cloud requests offer a contextual retry. Shared Next Up loading artwork uses the existing gamepad icon and CSS transform/opacity animation, disabled for reduced motion. No persistence, OAuth or provider contract changes.
 
 TypeScript production build and lint passed. All 27 browser tests passed, including profile visibility, theme persistence into a second simulated device, delayed loading, reduced motion, axe and both themes at 320–1440 px. The production PWA offline/draft/update test passed. Inspected `.local/profile-light-mobile.png` and `.local/brand-loading-mobile.png`. The account provider is simulated in browser tests; no new claim of real cross-device validation or guaranteed 60 FPS. Changes remain local.
+
+## Panoramic hero B — 2026-09-11
+
+Implemented the selected B layout: landscape art on desktop, art above content on mobile, full-cover fallback. No account or library mutations. Production build/types/lint, 14 unit tests, Worker protocol tests, all 32 browser tests and the PWA offline/update test passed. Browser checks cover image failure, absent/invalid artwork, saved-game preservation, mobile ordering, keyboard/axe and both themes at 320–1440 px. Worker fixtures verify exact ID queries, auth headers, invalid-input rejection without upstream calls, public success caching, no-store errors and Retry-After propagation. Browser provider responses are simulated; actual Steam artwork was inspected separately in `.local/hero-b-{theme}-{width}.png`.
+
+Live read-only local Worker checks against IGDB returned HTTP 200 with landscape art for game IDs 159119 and 37, and null for 131931. No production deployment. Existing build chunk advisory remains; no guaranteed frame-rate claim.
+
+## Pre-push Staff pass — September 11, 2026
+
+**STAFF PASS: READY.** David approved the current authenticated app and selected hero B, then requested a direct push to main. Reviewed both the 12-file final refinement and the 39-file accumulated change since origin/main, including the previously committed Supabase implementation. The first final browser run exposed a missing h1 in the full-page loading fallback; added a visually hidden heading to all three loading entry points and reran the complete application checks successfully.
+
+| Gate | Result | Evidence |
+| --- | --- | --- |
+| Decisions/scope | PASS | Approved Google/account flow, Settings Profile, animated logo and hero B; no new service or deployment automation |
+| Individual/accumulated diff | PASS | 12/12 and 39/39 files traced; origin/main fetched; no rebase required |
+| Canonical imports/consumers | PASS | AccountGate → App → CloudLibrary/RPC; Today → HeroArtwork → optional artwork endpoint; direct imports |
+| DTO and capability parity | PASS | Derived artwork metadata does not alter Game/backups; account isolation, legacy import, stale edits and failure recovery exercised |
+| Provider/lifecycle | PASS | Documented IGDB/Steam contracts, live artwork responses, Worker mappings; SQL ownership and transaction semantics; request abort/cache ownership reviewed |
+| Validation | PASS | Types, lint, 14 unit tests, Worker harness, 66 PostgreSQL/PGlite checks, 32 browser tests, production PWA test and Wrangler dry run |
+| Privacy/rollout | PASS | No secret-pattern matches in outgoing files; env secrets/private previews ignored; production asset exclusion validated; manual deployment retained |
+
+Trace groups: auth SDK/config, AccountGate/Landing/loaders/styles, cloud controller and editor/draft/Steam adapters implement the approved account flow; two SQL migrations and database harness enforce ownership and atomic updates; HeroArtwork/App/style and Worker/contracts provide the approved panorama; test fixtures/specs verify those behaviors; README/development/integrations/Supabase docs and this report record reproducibility and limits. `public/landing-today.jpg` is the public sample-library screenshot. Detailed local inventories remain outside the repository.
+
+David reported real Google sign-in, adding a game and subsequent successful local app use. Automated account transport remains simulated; no independent hosted two-device result is claimed. The production HTTP probe returned 403 in this tool environment, so it does not establish live UI status. The repository has no deployment workflow/checks and its documented Cloudflare flow is manual: pushing source is separate from publishing. The build retains its non-blocking bundle-size advisory. No paid services, new secrets, deployment, database changes or unrelated repository writes were performed in this push step.

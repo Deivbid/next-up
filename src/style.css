@@ -239,8 +239,8 @@
 }
 .current-game {
   display: grid;
-  grid-template-columns: 1.05fr 1fr;
-  min-height: 280px;
+  grid-template-columns: 1fr 1fr;
+  min-height: 340px;
   overflow: hidden;
   background: var(--card);
   border: 1px solid var(--border);
@@ -248,7 +248,7 @@
   position: relative;
 }
 .current-copy {
-  padding: 32px;
+  padding: 40px;
   z-index: 1;
   align-self: center;
 }
@@ -277,25 +277,44 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.current-game > .cover {
-  height: 100%;
+.hero-artwork {
   position: absolute;
-  right: 0;
-  width: 50%;
-  border-radius: 0;
+  inset: 0;
+  overflow: hidden;
 }
-.current-game > .cover img {
-  object-position: 50% 30%;
+.hero-artwork > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 70% center;
 }
-.current-game > .cover:after {
+.hero-artwork:not(.hero-artwork-fallback)::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, var(--card), transparent 70%);
+  background: linear-gradient(
+    90deg,
+    var(--card) 4%,
+    var(--card) 30%,
+    transparent 85%
+  );
 }
-.current-game > .cover .cover-fallback {
-  opacity: 0.35;
+.hero-artwork-fallback {
+  left: 50%;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--muted);
 }
+.hero-artwork-fallback .cover {
+  height: 292px;
+  max-width: 100%;
+  border-radius: 6px;
+}
+.hero-artwork-fallback .cover img {
+  object-fit: contain;
+}
+
 .cover {
   aspect-ratio: 2/3;
   overflow: hidden;
@@ -902,12 +921,15 @@
     font-size: 11px;
   }
   .current-game {
-    min-height: 216px;
-    grid-template-columns: 1fr 0.6fr;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
   }
   .current-copy {
-    padding: 22px;
-    max-width: 76%;
+    padding: 16px 22px 26px;
+    max-width: 100%;
+    width: 100%;
+    order: 1;
   }
   .current-copy h2 {
     font-size: 27px;
@@ -921,9 +943,26 @@
   .current-copy > button {
     margin-top: 16px;
   }
-  .current-game > .cover {
-    width: 48%;
+  .hero-artwork {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    aspect-ratio: 16/9;
+    order: 0;
   }
+  .hero-artwork > img {
+    object-position: 68% center;
+  }
+  .hero-artwork:not(.hero-artwork-fallback)::after {
+    background: linear-gradient(0deg, var(--card), transparent 40%);
+  }
+  .hero-artwork-fallback {
+    padding: 16px;
+  }
+  .hero-artwork-fallback .cover {
+    height: 100%;
+  }
+
   .section-heading {
     display: block;
     margin-bottom: 20px;
@@ -1043,4 +1082,6 @@
   }
 }
 
-.library-loading { min-height: 70vh; }
+.library-loading {
+  min-height: 70vh;
+}

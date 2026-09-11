@@ -14,6 +14,7 @@ const endpoint = "https://steamcommunity.com/openid/login";
 const ns = "http://specs.openid.net/auth/2.0";
 let valid = true;
 let providerCalls = 0;
+let artworkStatus = 200;
 const runtime = new Miniflare(
   convertV4MiniflareOptions({
     workers: [
@@ -24,6 +25,8 @@ const runtime = new Miniflare(
         compatibilityFlags: ["nodejs_compat"],
         bindings: {
           APP_ORIGIN: origin,
+          TWITCH_CLIENT_ID: "test-client",
+          TWITCH_CLIENT_SECRET: "test-secret",
           STEAM_WEB_API_KEY: "test-only-not-a-real-key",
         },
         durableObjects: {
@@ -32,6 +35,34 @@ const runtime = new Miniflare(
         outboundService: async (request) => {
           providerCalls++;
           const url = new URL(request.url);
+          if (url.hostname === "id.twitch.tv")
+            return Response.json({
+              access_token: "test-token",
+              expires_in: 3600,
+            });
+          if (url.hostname === "api.igdb.com") {
+            assert.equal(request.headers.get("Client-ID"), "test-client");
+            assert.equal(
+              request.headers.get("Authorization"),
+              "Bearer test-token",
+            );
+            const query = await request.text();
+            if (query.startsWith("search"))
+              return Response.json([{ id: 1, name: "Test game" }]);
+            assert.match(query, /^where id = 123;/);
+            assert.match(query, /artworks.width/);
+            if (artworkStatus !== 200)
+              return new Response("Unavailable", {
+                status: artworkStatus,
+                headers: { "Retry-After": "12" },
+              });
+            return Response.json([
+              {
+                id: 123,
+                artworks: [{ image_id: "art123", width: 1920, height: 1080 }],
+              },
+            ]);
+          }
           if (url.href.startsWith("https://steamcommunity.com/openid/id/"))
             return new Response(
               `<XRDS><XRD><Service><Type>${ns}/signon</Type><URI>${endpoint}</URI></Service></XRD></XRDS>`,
@@ -91,7 +122,7 @@ function callback(login) {
 }
 try {
   assert.deepEqual(await (await call("/api/providers")).json(), {
-    catalog: false,
+    catalog: true,
     steam: true,
     connected: false,
   });
@@ -154,6 +185,42 @@ try {
       .status,
     401,
   );
+  await pause();
+  const artwork = await call("/api/artwork?igdbId=123");
+  assert.equal(artwork.status, 200);
+  assert.equal(artwork.headers.get("Cache-Control"), "public, max-age=86400");
+  assert.deepEqual(await artwork.json(), {
+    url: "https://images.igdb.com/igdb/image/upload/t_1080p/art123.jpg",
+  });
+  await pause();
+  const beforeInvalid = providerCalls;
+  assert.equal(
+    (await call("/api/artwork?igdbId=123%3Bfields%20*")).status,
+    400,
+  );
+  assert.equal(providerCalls, beforeInvalid);
+  for (const [status, expected] of [
+    [429, 429],
+    [401, 502],
+    [500, 502],
+  ]) {
+    await pause();
+    artworkStatus = status;
+    const error = await call("/api/artwork?igdbId=123");
+    assert.equal(error.status, expected);
+    assert.equal(error.headers.get("Cache-Control"), "no-store");
+    if (status === 429) assert.equal(error.headers.get("Retry-After"), "12");
+  }
+  await pause();
+  artworkStatus = 200;
+  const catalogResponse = await call("/api/catalog?q=Test");
+  assert.equal(catalogResponse.status, 200);
+  assert.deepEqual((await catalogResponse.json()).games[0], {
+    igdbId: 1,
+    title: "Test game",
+    cover: "",
+    genres: [],
+  });
   console.log(
     `Worker checks passed: browser-bound login, discovery + direct verification, replay rejection, session import and CSRF-safe logout. ${providerCalls} mocked provider calls; no external authentication.`,
   );

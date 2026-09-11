@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { XMLParser } from "fast-xml-parser";
-import { catalogSchema, steamLibrarySchema } from "../shared/contracts";
+import {
+  artworkSchema,
+  catalogSchema,
+  steamLibrarySchema,
+} from "../shared/contracts";
 export const STEAM_OPENID = "https://steamcommunity.com/openid/login";
 export const OPENID_NS = "http://specs.openid.net/auth/2.0";
 export class ProviderError extends Error {
@@ -56,6 +60,31 @@ export function mapCatalog(body: unknown) {
         : "",
       genres: g.genres?.slice(0, 10).map((v) => v.name) ?? [],
     })),
+  });
+}
+export function mapArtwork(body: unknown) {
+  const image = z.object({
+    image_id: z.string().regex(/^[a-zA-Z0-9_]+$/),
+    width: z.number().positive(),
+    height: z.number().positive(),
+  });
+  const games = z
+    .array(
+      z.object({
+        artworks: z.array(image).optional(),
+        screenshots: z.array(image).optional(),
+      }),
+    )
+    .max(1)
+    .parse(body);
+  const game = games[0];
+  const art = [...(game?.artworks ?? []), ...(game?.screenshots ?? [])].find(
+    (image) => image.width >= 960 && image.width / image.height >= 1.5,
+  );
+  return artworkSchema.parse({
+    url: art
+      ? `https://images.igdb.com/igdb/image/upload/t_1080p/${art.image_id}.jpg`
+      : null,
   });
 }
 export function mapSteam(body: unknown) {

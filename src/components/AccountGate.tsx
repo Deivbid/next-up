@@ -195,6 +195,7 @@ function AccountLibrary({
     <Suspense
       fallback={
         <main className="auth-loading">
+          <h1 className="sr-only">Next Up</h1>
           <BrandLoader />
         </main>
       }
@@ -216,6 +217,7 @@ function SignedIn({ session }: { session: Session }) {
   if (!library)
     return (
       <main className="auth-loading">
+        <h1 className="sr-only">Next Up</h1>
         <BrandLoader />
       </main>
     );
@@ -284,6 +286,7 @@ export function AccountGate() {
   if (session === undefined)
     return (
       <main className="auth-loading">
+        <h1 className="sr-only">Next Up</h1>
         <BrandLoader />
       </main>
     );

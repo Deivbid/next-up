@@ -24,3 +24,17 @@ export type SteamGame = z.infer<typeof steamGameSchema>;
 export const providerSchema = z
   .object({ catalog: z.boolean(), steam: z.boolean(), connected: z.boolean() })
   .strict();
+
+// Public, derived artwork metadata; never part of a user's game or backup.
+export const artworkSchema = z
+  .object({
+    url: z
+      .string()
+      .url()
+      .max(500)
+      .regex(
+        /^https:\/\/images\.igdb\.com\/igdb\/image\/upload\/t_1080p\/[a-zA-Z0-9_]+\.jpg$/,
+      )
+      .nullable(),
+  })
+  .strict();

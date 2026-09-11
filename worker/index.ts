@@ -7,6 +7,7 @@ import {
   ProviderError,
   upstream,
   mapCatalog,
+  mapArtwork,
   mapSteam,
   validateAssertion,
   validateDiscovery,
@@ -164,6 +165,7 @@ export class IntegrationState extends DurableObject<Env> {
     if (
       ![
         "/api/catalog",
+        "/api/artwork",
         "/api/steam/login",
         "/api/steam/callback",
         "/api/steam/library",
@@ -178,14 +180,28 @@ export class IntegrationState extends DurableObject<Env> {
     this.active++;
     const signal = AbortSignal.timeout(8000);
     try {
-      if (url.pathname === "/api/catalog") {
+      if (url.pathname === "/api/catalog" || url.pathname === "/api/artwork") {
         if (!catalog) return json({ error: "catalog_not_configured" }, 503);
-        const q = z
-          .string()
-          .trim()
-          .min(2)
-          .max(100)
-          .parse(url.searchParams.get("q"));
+        const isArtwork = url.pathname === "/api/artwork";
+        let query: string;
+        if (isArtwork) {
+          const id = z.coerce
+            .number()
+            .int()
+            .positive()
+            .safe()
+            .safeParse(url.searchParams.get("igdbId"));
+          if (!id.success) return json({ error: "invalid_game_id" }, 400);
+          query = `where id = ${id.data}; fields artworks.image_id,artworks.width,artworks.height,screenshots.image_id,screenshots.width,screenshots.height; limit 1;`;
+        } else {
+          const q = z
+            .string()
+            .trim()
+            .min(2)
+            .max(100)
+            .parse(url.searchParams.get("q"));
+          query = `search ${JSON.stringify(q)}; fields name,cover.image_id,genres.name; limit 20;`;
+        }
         if (!this.token || this.token.expires < Date.now() + 60000) {
           const r = await upstream(
             "https://id.twitch.tv/oauth2/token",
@@ -219,11 +235,15 @@ export class IntegrationState extends DurableObject<Env> {
               Authorization: `Bearer ${this.token.value}`,
               "Content-Type": "text/plain",
             },
-            body: `search ${JSON.stringify(q)}; fields name,cover.image_id,genres.name; limit 20;`,
+            body: query,
           },
           signal,
         );
-        return json(mapCatalog(await r.json()));
+        return isArtwork
+          ? json(mapArtwork(await r.json()), 200, {
+              "Cache-Control": "public, max-age=86400",
+            })
+          : json(mapCatalog(await r.json()));
       }
       if (!steam) return json({ error: "steam_requires_key_and_https" }, 503);
       if (url.pathname === "/api/steam/login") {
@@ -326,7 +346,7 @@ export class IntegrationState extends DurableObject<Env> {
       return json(mapSteam(await result.json()));
     } catch (error) {
       if (
-        url.pathname === "/api/catalog" &&
+        (url.pathname === "/api/catalog" || url.pathname === "/api/artwork") &&
         error instanceof ProviderError &&
         error.code === "provider_authentication_failed"
       )
