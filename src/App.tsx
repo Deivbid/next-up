@@ -1,5 +1,10 @@
-import { useEffect, useRef, useState } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import {
   IconDeviceGamepad2,
   IconHome,
@@ -16,8 +21,8 @@ import {
   IconCheck,
 } from "@tabler/icons-react";
 import { useRegisterSW } from "virtual:pwa-register/react";
-import { db } from "./data/db";
-import { readDraft, clearDraft } from "./data/draft";
+import { CloudLibrary } from "./data/cloud-library";
+import { readDraft, readDraftRevision, clearDraft } from "./data/draft";
 import {
   defaultPreferences,
   devices,
@@ -29,8 +34,8 @@ import {
 } from "./domain/game";
 import { recommend } from "./domain/recommend";
 import { demoGames } from "./data/demo";
-import { parseBackup, restoreBackup, type Backup } from "./data/backup";
-import { importSteam } from "./data/steam";
+import { parseBackup, type Backup } from "./data/backup";
+import { steamCoverUrl, ensureSteamOwner } from "./data/steam";
 import {
   providerSchema,
   steamLibrarySchema,
@@ -67,6 +72,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "./components/ui/dialog";
+import { BrandLoader } from "./components/BrandLoader";
 import { Cover } from "./components/Cover";
 import { GameEditor } from "./components/GameEditor";
 import { SteamGamePicker } from "./components/SteamGamePicker";
@@ -80,14 +86,29 @@ const navigation = [
   { id: "library", name: "Library", icon: IconBooks },
   { id: "settings", name: "Settings", icon: IconSettings },
 ];
-export default function App() {
-  const games = useLiveQuery(() => db.games.toArray());
-  const savedPreferences = useLiveQuery(() =>
-    db.preferences.get("preferences"),
-  );
-  const preferences = savedPreferences ?? defaultPreferences;
+export default function App({
+  library,
+  profilePanel,
+  accountNotices,
+}: {
+  library: CloudLibrary;
+  profilePanel: ReactNode;
+  accountNotices: ReactNode;
+}) {
+  const cloud = useSyncExternalStore(library.subscribe, library.getSnapshot);
+  const games = cloud.snapshot?.games;
+  const preferences = cloud.snapshot?.preferences ?? defaultPreferences;
   const [page, setPage] = useState(currentPage);
-  const [editor, setEditor] = useState<Game | null>(readDraft);
+  const [editor, setEditorState] = useState<Game | null>(() =>
+    readDraft(library.userId),
+  );
+  const [editorRevision, setEditorRevision] = useState(() =>
+    readDraftRevision(library.userId),
+  );
+  const setEditor = (game: Game | null) => {
+    if (game) setEditorRevision(cloud.snapshot?.revision ?? -1);
+    setEditorState(game);
+  };
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [offline, setOffline] = useState(!navigator.onLine);
@@ -100,7 +121,9 @@ export default function App() {
   const [libraryLimit, setLibraryLimit] = useState(48);
   const [backup, setBackup] = useState<Backup | null>(null);
   const [erase, setErase] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [confirmRevision, setConfirmRevision] = useState<number | undefined>();
+  const [actionBusy, setBusy] = useState(false);
+  const busy = actionBusy || cloud.busy;
   const [providers, setProviders] = useState({
     catalog: false,
     steam: false,
@@ -150,10 +173,15 @@ export default function App() {
     const controller = new AbortController();
     fetch("/api/providers", { signal: controller.signal })
       .then((r) => r.json())
-      .then((body) => setProviders(providerSchema.parse(body)))
+      .then(async (body) => {
+        const parsed = providerSchema.parse(body);
+        const safe = await ensureSteamOwner(library.userId, parsed.connected);
+        if (!controller.signal.aborted)
+          setProviders({ ...parsed, connected: parsed.connected && safe });
+      })
       .catch(() => {});
     return () => controller.abort();
-  }, [page]);
+  }, [page, library.userId]);
   useEffect(() => {
     if (!notice) return;
     const timer = setTimeout(() => setNotice(""), 5000);
@@ -166,9 +194,11 @@ export default function App() {
       await work();
       setNotice(message);
       return true;
-    } catch {
+    } catch (e) {
       setError(
-        "That change could not be saved. Your previous data is still available. Please try again.",
+        e instanceof Error
+          ? e.message
+          : "Could not save. Refresh your library before trying again.",
       );
       return false;
     } finally {
@@ -177,34 +207,26 @@ export default function App() {
   }
   async function changePreferences(patch: Partial<Preferences>) {
     await action(
-      () => db.preferences.put({ ...preferences, ...patch }),
+      () => library.change({ preferences: { ...preferences, ...patch } }),
       "Settings saved.",
     );
   }
   async function loadDemo() {
-    await action(
-      () =>
-        db.transaction("rw", db.games, async () => {
-          if (await db.games.count()) throw new Error("Library must be empty");
-          await db.games.bulkAdd(demoGames());
-        }),
-      "Example games added. You can edit or remove them.",
-    );
+    await action(async () => {
+      if (games?.length) throw new Error("Library must be empty");
+      await library.change({ games: demoGames() });
+    }, "Example games added. You can edit or remove them.");
   }
   async function exportData() {
     await action(async () => {
-      const data = await db.transaction(
-        "r",
-        db.games,
-        db.preferences,
-        async () => ({
-          application: "next-up",
-          exportedAt: new Date().toISOString(),
-          games: await db.games.toArray(),
-          preferences:
-            (await db.preferences.get("preferences")) ?? defaultPreferences,
-        }),
-      );
+      if (!cloud.snapshot)
+        throw new Error("Open your library before exporting.");
+      const data = {
+        application: "next-up",
+        exportedAt: new Date().toISOString(),
+        games: cloud.snapshot.games,
+        preferences: cloud.snapshot.preferences,
+      };
       const blob = new Blob([JSON.stringify(data, null, 2)], {
         type: "application/json",
       });
@@ -223,6 +245,7 @@ export default function App() {
       if (file.size > 10 * 1024 * 1024)
         throw new Error("Backup must be smaller than 10 MB.");
       setBackup(parseBackup(await file.text()));
+      setConfirmRevision(cloud.snapshot?.revision);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not read this backup.");
     }
@@ -305,12 +328,13 @@ export default function App() {
         </div>
       </header>
       <main id="content" ref={mainRef} tabIndex={-1} className="app-main">
+        {accountNotices}
         {offline && (
           <Alert>
             <IconWifiOff aria-hidden="true" />
             <AlertDescription>
-              You’re offline. Your library is here; catalog search and Steam
-              need a connection.
+              You’re offline. You can read the saved copy of your library.
+              Connect to save changes, search the catalog or use Steam.
             </AlertDescription>
           </Alert>
         )}
@@ -336,7 +360,9 @@ export default function App() {
                 <p>Pick something that fits right now.</p>
               </div>
               {games === undefined ? (
-                <p role="status" className="library-loading">Opening your library…</p>
+                <div className="library-loading">
+                  <BrandLoader />
+                </div>
               ) : games.length === 0 ? (
                 <Empty>
                   <EmptyHeader>
@@ -346,7 +372,7 @@ export default function App() {
                     <EmptyTitle>Your next good game starts here.</EmptyTitle>
                     <EmptyDescription>
                       Add a game you own, or try a small example library to get
-                      a feel for Next Up. No account needed.
+                      a feel for Next Up.
                     </EmptyDescription>
                   </EmptyHeader>
                   <EmptyContent>
@@ -644,6 +670,7 @@ export default function App() {
                 <p>A few preferences. Everything stays yours.</p>
               </div>
               <div className="settings-grid">
+                {profilePanel}
                 <section>
                   <h2>Your setup</h2>
                   <FieldGroup>
@@ -693,8 +720,9 @@ export default function App() {
                 <section>
                   <h2>Your data</h2>
                   <p>
-                    Saved in this browser on this device. Export a backup before
-                    clearing browser data or switching devices.
+                    Saved to your account. Changes appear on your other devices
+                    when you open or refresh Next Up. A local copy is available
+                    for offline reading.
                   </p>
                   <div className="button-row">
                     <Button
@@ -731,9 +759,12 @@ export default function App() {
                   <Button
                     variant="ghost"
                     disabled={busy}
-                    onClick={() => setErase(true)}
+                    onClick={() => {
+                      setConfirmRevision(cloud.snapshot?.revision);
+                      setErase(true);
+                    }}
                   >
-                    Delete local data
+                    Delete library data
                   </Button>
                 </section>
                 <section>
@@ -794,7 +825,15 @@ export default function App() {
                         </>
                       ) : (
                         <Button asChild>
-                          <a href="/api/steam/login">
+                          <a
+                            href="/api/steam/login"
+                            onClick={() =>
+                              sessionStorage.setItem(
+                                "next-up-steam-login-owner",
+                                library.userId,
+                              )
+                            }
+                          >
                             <IconBrandSteam
                               data-icon="inline-start"
                               aria-hidden="true"
@@ -825,8 +864,8 @@ export default function App() {
                     artwork gets a placeholder.
                   </p>
                   <p className="quiet">
-                    No accounts required. No tracking. No streaks to keep up
-                    with.
+                    Your library is private to your account. Export a backup
+                    whenever you want.
                   </p>
                 </section>
               </div>
@@ -869,8 +908,10 @@ export default function App() {
         <GameEditor
           key={editor.id}
           initial={editor}
+          library={library}
+          expectedRevision={editorRevision}
           onClose={() => {
-            clearDraft();
+            clearDraft(library.userId);
             setEditor(null);
           }}
           onSaved={setNotice}
@@ -888,12 +929,12 @@ export default function App() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {backup ? "Restore this backup?" : "Delete all local data?"}
+              {backup ? "Restore this backup?" : "Delete your library?"}
             </DialogTitle>
             <DialogDescription>
               {backup
                 ? `This replaces your current library and settings with ${backup.games.length} games from the backup. Export your current data first if you want to keep it.`
-                : "This removes your games, notes and preferences from this browser. Export a backup first if you want to keep them."}
+                : "This removes your games, notes and preferences from your account on all devices. Your Google account stays connected. Export a backup first if you want to keep them."}
             </DialogDescription>
           </DialogHeader>
           <div className="button-row">
@@ -904,17 +945,23 @@ export default function App() {
                 const ok = await action(
                   () =>
                     backup
-                      ? restoreBackup(db, backup)
-                      : db.transaction(
-                          "rw",
-                          db.games,
-                          db.preferences,
-                          async () => {
-                            await db.games.clear();
-                            await db.preferences.clear();
+                      ? library.change(
+                          {
+                            games: backup.games,
+                            preferences: backup.preferences,
+                            replace: true,
                           },
+                          confirmRevision,
+                        )
+                      : library.change(
+                          {
+                            games: [],
+                            preferences: defaultPreferences,
+                            replace: true,
+                          },
+                          confirmRevision,
                         ),
-                  backup ? "Backup restored." : "Local data deleted.",
+                  backup ? "Backup restored." : "Library data deleted.",
                 );
                 if (ok) {
                   setBackup(null);
@@ -979,12 +1026,22 @@ export default function App() {
                 if (
                   await action(
                     () =>
-                      importSteam(
-                        db,
-                        steamGames?.filter((g) =>
-                          selected.includes(g.steamId),
-                        ) ?? [],
-                      ),
+                      library.change({
+                        games: (steamGames ?? [])
+                          .filter(
+                            (g) =>
+                              selected.includes(g.steamId) &&
+                              !games?.some(
+                                (existing) => existing.steamId === g.steamId,
+                              ),
+                          )
+                          .map((g) => ({
+                            ...newGame(),
+                            ...g,
+                            devices: ["PC"] as Device[],
+                            cover: steamCoverUrl(g.steamId),
+                          })),
+                      }),
                     "Selected games imported. Existing edits preserved.",
                   )
                 )

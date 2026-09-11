@@ -1,4 +1,5 @@
-import { test, expect } from "@playwright/test";
+import { expect } from "@playwright/test";
+import { test } from "../helpers/cloud";
 import { readFile, writeFile } from "node:fs/promises";
 test("offline library, draft recovery and explicit update protect saved games", async ({
   page,
@@ -23,12 +24,26 @@ test("offline library, draft recovery and explicit update protect saved games", 
   await page.getByRole("button", { name: "View Balatro" }).click();
   await page.getByLabel("Game title").fill("Balatro — saved offline");
   await page.getByRole("button", { name: "Save changes" }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(
+    page.getByText("Connect to the internet to save changes.", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Discard changes", exact: true })
+    .click();
   await page.reload();
   await expect(
-    page.getByRole("button", { name: "View Balatro — saved offline" }),
+    page.getByRole("button", { name: "View Balatro", exact: true }),
   ).toBeVisible();
   await context.setOffline(false);
+  await page.getByRole("link", { name: "Settings", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Refresh library", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Refresh library" }),
+  ).toBeEnabled();
+  await page.getByRole("link", { name: "Library", exact: true }).click();
   await page.getByRole("button", { name: "Add game", exact: true }).click();
   await page.getByLabel("Game title").fill("A draft worth keeping");
   const path = "dist/sw.js";

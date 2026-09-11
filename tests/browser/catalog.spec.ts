@@ -1,4 +1,5 @@
-import { test, expect } from "@playwright/test";
+import { expect } from "@playwright/test";
+import { test } from "../helpers/cloud";
 import AxeBuilder from "@axe-core/playwright";
 
 const games = Array.from({ length: 20 }, (_, i) => ({

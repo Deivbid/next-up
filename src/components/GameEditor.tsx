@@ -21,18 +21,21 @@ import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 import { NativeSelect, NativeSelectOption } from "./ui/native-select";
 import { Alert, AlertDescription } from "./ui/alert";
 import { devices, statuses, gameSchema, type Game } from "../domain/game";
-import { saveGame, db } from "../data/db";
+import { CloudLibrary } from "../data/cloud-library";
 import { storeDraft } from "../data/draft";
-import { useLiveQuery } from "dexie-react-hooks";
 import { Cover } from "./Cover";
 import { catalogSchema, type CatalogGame } from "../../shared/contracts";
 
 export function GameEditor({
   initial,
+  library,
+  expectedRevision,
   onClose,
   onSaved,
 }: {
   initial: Game;
+  library: CloudLibrary;
+  expectedRevision: number;
   onClose: () => void;
   onSaved: (message: string) => void;
 }) {
@@ -45,10 +48,12 @@ export function GameEditor({
   const [discard, setDiscard] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const dirty = JSON.stringify(game) !== JSON.stringify(initial);
-  const existing = !!useLiveQuery(() => db.games.get(initial.id), [initial.id]);
+  const existing = !!library
+    .getSnapshot()
+    .snapshot?.games.some((g) => g.id === initial.id);
   useEffect(() => {
-    if (dirty) storeDraft(game);
-  }, [dirty, game]);
+    if (dirty) storeDraft(game, library.userId, expectedRevision);
+  }, [dirty, game, library.userId, expectedRevision]);
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {
       if (dirty) {
@@ -125,12 +130,17 @@ export function GameEditor({
     }
     setBusy(true);
     try {
-      await saveGame(parsed.data);
+      await library.change(
+        { games: [{ ...parsed.data, updatedAt: Date.now() }] },
+        expectedRevision,
+      );
       onSaved(existing ? "Game updated." : "Game added to your library.");
       onClose();
-    } catch {
+    } catch (e) {
       setError(
-        "Could not save this game. Check available storage or whether it is already in your library.",
+        e instanceof Error
+          ? e.message
+          : "Could not save. Refresh your library before trying again.",
       );
     } finally {
       setBusy(false);
@@ -169,18 +179,25 @@ export function GameEditor({
         ) : deleting ? (
           <div className="confirm-stack">
             <h3>Remove {game.title}?</h3>
-            <p>This removes the game and its notes from this device.</p>
+            <p>
+              This removes the game and its notes from your account on all
+              devices.
+            </p>
             <Button
               disabled={busy}
               variant="destructive"
               onClick={async () => {
                 setBusy(true);
                 try {
-                  await db.games.delete(game.id);
+                  await library.change({ remove: [game.id] }, expectedRevision);
                   onSaved("Game removed.");
                   onClose();
-                } catch {
-                  setError("Could not remove the game. Try again.");
+                } catch (e) {
+                  setError(
+                    e instanceof Error
+                      ? e.message
+                      : "Could not remove the game. Refresh before trying again.",
+                  );
                 } finally {
                   setBusy(false);
                 }

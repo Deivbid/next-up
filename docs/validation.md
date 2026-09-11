@@ -92,3 +92,19 @@ File trace: `src/App.tsx` wires the picker and import actions; `src/components/S
 | Triggered audits | PASS | Consumer/provider mapping, image fallback, responsive/axe checks, Worker dry run and public-file/secret scan |
 
 The eight picker-refinement files are traced above. Four additional files preserve the current deployment context: `wrangler.production.jsonc` records the user-created config without secrets; `docs/development.md` explains manual deployments, local asset exclusion and browser persistence; `docs/integrations.md` records user-reported live Steam acceptance; `README.md` links the running app and removes the outdated undeployed claim. No deployment automation or account credentials are added. No blockers or deferred correctness work.
+
+
+## Supabase account integration — 2026-09-11
+
+Local delivery, not deployed. TypeScript, lint, 13 unit checks and the Worker protocol harness passed. PostgreSQL/PGlite passed 66 ownership, integrity, revision and atomic-operation checks. The 25 browser scenarios passed using simulated Supabase sessions/RPC; the six account scenarios and PWA offline/draft/update scenario were repeated successfully after the final image/lazy-route optimization. Desktop and mobile screenshots were inspected; axe reported no violations in the tested views/themes at 320–1440 px.
+
+Lighthouse mobile simulation on the anonymous local production landing: Performance **88**, Accessibility **100**, Best Practices **100**, SEO **92**. The initial run scored 67 for performance; reducing the screenshot and deferring the authenticated App chunk improved it. These are local lab results, not a guarantee of frame rate or deployed performance. Raw reports are local-only `.local/auth-lighthouse.json` and `.local/auth-lighthouse-final.json`. The build retains a raw-chunk-size advisory.
+
+A read-only check against the configured hosted project confirmed Google enabled (200) and anonymous library RPC access denied (401). David reported successful execution of both SQL migrations. David subsequently reported successful real Google login and adding a game. Hosted reload and two-device smoke testing still need user confirmation before publication. The browser suite is not represented as live OAuth end-to-end coverage.
+
+
+## Profile and loading refinement — 2026-09-11
+
+Moved email, refresh and logout into Settings → Profile. Save failures and legacy-import notices remain visible across views; failed cloud requests offer a contextual retry. Shared Next Up loading artwork uses the existing gamepad icon and CSS transform/opacity animation, disabled for reduced motion. No persistence, OAuth or provider contract changes.
+
+TypeScript production build and lint passed. All 27 browser tests passed, including profile visibility, theme persistence into a second simulated device, delayed loading, reduced motion, axe and both themes at 320–1440 px. The production PWA offline/draft/update test passed. Inspected `.local/profile-light-mobile.png` and `.local/brand-loading-mobile.png`. The account provider is simulated in browser tests; no new claim of real cross-device validation or guaranteed 60 FPS. Changes remain local.

@@ -7,9 +7,9 @@ I love games. Finding time for them is harder. I built Next Up to keep my backlo
 - 🕹️ Your library, wishlist and current games.
 - 🔎 Search-as-you-type with IGDB, or add games manually.
 - 🌙 Dark/light themes and an offline PWA.
-- 💾 No account required. Data stays in your browser; JSON backups move it with you.
+- 💾 Google sign-in, a private library across devices, and JSON backups.
 
-**Built with:** React · TypeScript · Vite · Tailwind CSS · shadcn/ui + Radix · Dexie/IndexedDB · Zod · Cloudflare Workers + Durable Objects.
+**Built with:** React · TypeScript · Vite · Tailwind CSS · shadcn/ui + Radix · Supabase Auth + PostgreSQL · Dexie/IndexedDB · Zod · Cloudflare Workers + Durable Objects.
 
 **Tested with:** Vitest · Playwright · axe · Lighthouse.
 
@@ -19,6 +19,7 @@ Node 22.12+ and npm.
 
 ```sh
 npm ci
+# Configure .env.local using .env.example and follow supabase/README.md
 npm run build
 npm run preview
 ```
@@ -27,4 +28,4 @@ Open **http://127.0.0.1:3030**. [Setup & checks](docs/development.md) · [API ke
 
 [Try Next Up](https://next-up.deivbid.workers.dev/) 🎮
 
-**Prototype:** no cloud sync or paid AI APIs. Steam import works on the HTTPS app; your library stays in this browser. Export a JSON backup to move it to another device.
+**This branch:** account storage is ready for local testing. Read your saved copy offline; connect to edit. Refresh to pick up changes from another device. No paid AI APIs. Steam import uses the HTTPS app. [Supabase setup](supabase/README.md).

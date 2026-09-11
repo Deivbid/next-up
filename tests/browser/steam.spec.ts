@@ -1,4 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "../helpers/cloud";
 import AxeBuilder from "@axe-core/playwright";
 
 const steamGames = Array.from({ length: 80 }, (_, index) => ({

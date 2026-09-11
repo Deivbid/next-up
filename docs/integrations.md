@@ -36,7 +36,7 @@ Consumer: this browser app. Provider adapter: `worker/index.ts` / `worker/provid
 | GET `/api/catalog?q=…` | Validated neutral catalog DTO; no local mutation |
 | GET `/api/steam/login` | Official Steam redirect, browser-bound one-use state, secure cookie |
 | GET `/api/steam/callback` | Checks return URL, provider-owned claimed ID, signed fields, nonce, XRDS discovery and direct verification; creates a 24-hour session |
-| GET `/api/steam/library` | Authenticated validated import candidates; library stays in the browser |
+| GET `/api/steam/library` | Authenticated validated import candidates; selected games are saved to the signed-in Supabase account |
 | POST `/api/steam/logout` | Requires exact Origin and custom header; clears server session and cookie |
 
 Responses are no-store, with no permissive CORS. Login/session cookies are HttpOnly, Secure, SameSite=Lax and host scoped. Nonces and state are consumed before provider verification so an interrupted attempt must start again. Redirecting upstream requests are rejected with manual redirect handling compatible with the Worker runtime.
