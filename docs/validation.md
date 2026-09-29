@@ -132,3 +132,93 @@ Live read-only local Worker checks against IGDB returned HTTP 200 with landscape
 Trace groups: auth SDK/config, AccountGate/Landing/loaders/styles, cloud controller and editor/draft/Steam adapters implement the approved account flow; two SQL migrations and database harness enforce ownership and atomic updates; HeroArtwork/App/style and Worker/contracts provide the approved panorama; test fixtures/specs verify those behaviors; README/development/integrations/Supabase docs and this report record reproducibility and limits. `public/landing-today.jpg` is the public sample-library screenshot. Detailed local inventories remain outside the repository.
 
 David reported real Google sign-in, adding a game and subsequent successful local app use. Automated account transport remains simulated; no independent hosted two-device result is claimed. The production HTTP probe returned 403 in this tool environment, so it does not establish live UI status. The repository has no deployment workflow/checks and its documented Cloudflare flow is manual: pushing source is separate from publishing. The build retains its non-blocking bundle-size advisory. No paid services, new secrets, deployment, database changes or unrelated repository writes were performed in this push step.
+
+## MCP local implementation — September 14, 2026
+
+Implemented eight remote MCP tools, explicit read/read-and-edit consent, Settings revocation and the public `/connect` guide. Existing multiple-device games, shared status, Google login, Steam import and library revision semantics are preserved. No AI model service, new hosting provider, automatic deployment or bulk-delete tool was added.
+
+Local evidence:
+
+- `npm run check` passed: app/Worker TypeScript, ESLint, 14 unit tests, existing Worker provider harness, 50 MCP checks using the official SDK client and a real local Worker, 94 PostgreSQL/PGlite checks, and production build.
+- The full 38-scenario browser regression passed. After adjusting optional OAuth metadata to match Supabase's implementation, all eight final MCP browser scenarios passed, including two additional cases for omitted metadata/failed permission saves and unsupported scopes. These use simulated provider sessions, not a hosted OAuth roundtrip.
+- Axe and overflow checks passed at 320, 390, 768 and 1440 px; consent is keyboard operable and defaults to read-only. Settings connections were checked in both themes. Inspected desktop/mobile guide and mobile consent screenshots stored under `.local/`. Motion uses existing reduced-motion rules.
+- Production PWA offline/draft/update test passed. No new Lighthouse or measured frame-rate claim. The current initial JS chunk is about 706 kB / 208 kB gzip; its existing size advisory remains.
+- Wrangler production-config dry run passed (Worker 1437 KiB / 263 KiB gzip). A separate local run of that config verified `/oauth/consent` has `frame-ancestors 'none'`, `X-Frame-Options: DENY` and `Cache-Control: no-store`. Private concept files are excluded by the built `.assetsignore`; a concept URL returns only the app fallback.
+- Through the real local frontend proxy, `/connect` returns 200, resource metadata returns 200 JSON, and unauthenticated `/api/mcp` returns 401 with `WWW-Authenticate` discovery. Local servers were restarted with the new proxy and server-side public Supabase configuration.
+- No configured credential values were found in outgoing source files. All dependency lockfile URLs use the public npm registry. Secrets, provider source checkout, skills and test artifacts remain ignored. No hosted database write, deployment, commit or push was performed.
+
+Provider audit: inspected the existing Next Up consumer, SQL migrations, tests, installed SDKs, official MCP/Cloudflare/Supabase documentation and Supabase Auth implementation at `4eee58f296d9698a1c2c0ae14d7a0b379c7622d3`. Verified endpoint methods, consent auto-approval behavior, single-use codes/PKCE locks, token-hook input, optional response fields, grant revocation and refresh-session deletion. Application-level grants enforce revocation before JWT expiry; fixed issuer/audience/JWKS validation and existing atomic revisions prevent cross-user access and stale writes. Timeout, retry and error contracts are recorded in [`mcp.md`](mcp.md). Hosted provider version/settings and the final client roundtrip remain unverified.
+
+### Staff pass — release acceptance pending
+
+**STAFF PASS: NOT READY for release.** Local implementation and deterministic checks pass. The required hosted SQL/hook/OAuth configuration and Google → consent → MCP → revocation roundtrip still need David's manual setup and joint validation. This is an explicit release blocker, not a completed capability claim or an excuse to bypass the gate. No push or review is requested.
+
+| Gate | Result | Evidence | Exception |
+| --- | --- | --- | --- |
+| Decisions and scope | PASS | Approved MCP, existing platforms/shared progress, no paid model API or auto-deployment | None |
+| Individual / accumulated diff | PASS | 33/33 changed or new files traced below against main `fd9b2d1`; no branch stack | None |
+| Canonical imports / exports | PASS | Shared snapshot/schema owners; direct consumers; no new re-export barrels | None |
+| Reachable consumers | PASS | Worker route → MCP server → existing RPC/catalog/recommender; landing/consent/Settings → account transport, tested | None |
+| DTO / versioning | PASS | Existing Game/backups unchanged; OAuth metadata validated against provider; SQL migration adds grant checks without replacing user data | None |
+| Capability parity | PASS | Existing browser/PWA/SQL regression; unsupported clients and bulk operations documented | None |
+| Activated audits | FAIL for release | Local checks above pass; hosted OAuth configuration and final real-client acceptance pending | None |
+
+File trace: `.dev.vars.example`, `package.json`, `package-lock.json`, `vite.config.ts`, `wrangler.production.jsonc`, `worker/env.d.ts`, `public/_headers` and `public/.assetsignore` provide runtime/dependency/asset configuration; `worker/index.ts` and `worker/mcp.ts` implement routing, limits and tools; `shared/library.ts`, `shared/mcp.ts` and `src/data/cloud-library.ts` own shared contracts; `202609140001_mcp_access.sql` enforces user/client grants; `src/data/mcp-connections.ts`, `AccountGate.tsx`, `AiConnections.tsx`, `OAuthConsent.tsx`, `ConnectGuide.tsx`, `Landing.tsx`, `src/main.tsx` and `src/style.css` connect consent and documentation to the UI; `scripts/check-{database,mcp,worker}.mjs`, `tests/browser/mcp.spec.ts` and `tests/helpers/cloud.ts` verify provider/storage/browser behavior; `README.md`, `supabase/README.md`, `docs/{mcp,development,file-inventory,validation}.md` document setup, boundaries and evidence. SDK/JWT and local PostgreSQL dependencies each have exercised consumers; no unused service integration was added.
+
+### Controlled production deployment — September 14, 2026
+
+David confirmed successful SQL execution, showed the enabled `next_up_mcp_token_hook`, enabled OAuth Server/dynamic registration, and then explicitly chose production testing instead of a local OAuth roundtrip. This supersedes the earlier local-first rollout decision. Public Supabase discovery and ES256 JWKS return 200. Production consent redirect allowlisting was requested; confirmation is still pending.
+
+Rebuilt the unchanged application and reran the production dry run successfully. Verified Wrangler's personal account and existing deployment, then uploaded the build and the two Supabase public configuration bindings together, preserving other variables/secrets. Worker `next-up` version **65b03ccd-e4cc-47cc-894f-5bdb7d2dfc33** is deployed at `https://next-up.deivbid.workers.dev`. Previous Worker version: `d7c08cd2-25ac-4019-8db9-a4fcbc93767c`; rolling back Worker code would not undo the separately applied SQL/hook. The temporary owner-only variables file was removed after upload. No Git commit or push was performed.
+
+Production smoke: landing, `/connect` and `/oauth/consent` return the current build (200); consent returns no-store and anti-framing CSP; MCP resource discovery returns the production resource/issuer (200); unauthenticated MCP calls correctly return 401 with discovery; `/api/providers` reports catalog and Steam configured. A fresh unsigned-in Playwright browser rendered the guide at 390/1440 px without overflow, displayed Google sign-in on the landing, and recorded no uncaught page errors. Screenshot: local-only `.local/mcp-production-guide.png`.
+
+Authenticated production acceptance is **still pending**, so the previous NOT READY verdict for full release acceptance is not relabeled as complete. Next: confirm the production Google return allowlist, connect through an OAuth-capable MCP client, exercise read-only access and revocation, then opt into editing and add/edit/remove one disposable test game. Existing library data must remain intact. This controlled deployment is the user-requested environment for completing that acceptance, not proof that it already passed.
+
+### Codex connection compatibility — September 14, 2026
+
+Registered the user-requested `next-up` MCP server in Codex and initiated its real OAuth flow. Codex adds `offline_access` even when `openid` is explicitly requested. Supabase's `internal/models/oauth_scope.go` lists it as supported, and the hosted authorize endpoint returned a valid consent redirect. Our consent UI incorrectly rejected it. Added only that standard scope and a visible explanation (“stay connected between sessions”), preserving read-only defaults, database grants and rejection of unknown scopes.
+
+TypeScript, lint, production build, all eight focused browser consent/settings scenarios and the production dry run passed. The consent fixture now uses Codex's actual `openid offline_access` combination and asserts its explanation is visible. Published the small compatibility fix as Worker version **69d5e21b-3086-4455-8c4c-996c484270da**, preserving configured variables/secrets. No database change, Git commit or push. User Google sign-in/consent and the authenticated MCP roundtrip are still pending; adding the configuration alone is not recorded as successful authorization.
+
+## 2026-09-28 — Multiple playing games and popular catalog
+
+**STAFF PASS: READY — scoped to this task's delta against the preserved starting tree.** The checkout already contained uncommitted MCP/auth work; this is not a new approval of that whole accumulated diff. No commit, push or deployment was performed.
+
+Decision ledger: show every owned Playing game, including several on one platform; preserve the single-game panoramic hero; offer up to 20 popular IGDB titles before searching. No new account setup, schema migration, dependencies, personalized ranking, ownership assumptions or library writes from catalog requests. Existing search/manual-entry behavior is retained.
+
+| Gate | Result | Evidence |
+| --- | --- | --- |
+| Decisions and scope | PASS | 10/10 task files traced below; task-only diff saved in ignored `.local/sept28-task.diff` against the pre-edit snapshot |
+| Diff individual/accumulated | PASS for task delta | Starting dirty files preserved; no commit/base rewrite; `git diff --check` passes |
+| Canonical imports/exports | PASS | No new exports, dependencies or component layers |
+| Reachable consumers | PASS | App renders the full Playing array; editor consumes `/api/catalog/popular`; tests cover selection/save and independent status changes |
+| DTO/versioning | PASS | Reuses catalog schema; popularity IDs validated before query interpolation; ordering/deduplication verified |
+| Capability parity | PASS | Single hero, debounced search, manual entry, editor cancellation and unavailable-provider fallback remain covered |
+| Risk audits | PASS | Worker/provider contract, public cache lifetime, cancellation/races, accessibility, themes and responsive layouts verified |
+
+File trace: `src/App.tsx` and `src/style.css` render the active-game grid; `src/components/GameEditor.tsx` loads popular titles and switches to search; `worker/index.ts` adapts IGDB ranking and caches its public response; `scripts/check-worker.mjs` covers ranking order, duplicates, empty/malformed responses, 401/429/500 mapping and cache hits; `tests/browser/catalog.spec.ts` covers opening without typing, scrolling, keyboard selection, save, late responses and fallback; `tests/browser/hero.spec.ts` covers multiple games across/shared platforms, independent edits/reload and both themes; `tests/helpers/cloud.ts` isolates default catalog traffic; `docs/integrations.md` and this log describe the verified behavior.
+
+Validation: TypeScript, ESLint, 14 unit tests, real Worker/DO integration checks with mocked outbound providers, production build, and **45 Playwright tests passed**. Browser checks include 320/390/768/1440 px, both themes, axe, keyboard, catalog races and existing auth/Steam/MCP flows. The initial browser launch required running Chromium outside the macOS sandbox; the final suite used a restarted Vite server to avoid stale transforms. A pre-existing hero test now allows StrictMode's initial aborted request and uses a deterministic cover fixture.
+
+Live provider smoke: local Worker returned 200 with 20 catalog games using the existing server-only credentials. No account data was changed during the live smoke. Screenshots in ignored `.local/playing-{dark,light}-{desktop,mobile}.png` and `.local/popular-mobile.png` were visually inspected; browser fixtures use placeholder artwork. Build succeeds with its existing >500 kB main-chunk advisory. No new performance/FPS claim is made.
+
+Follow-ups: none required for these two behaviors. Production deployment remains a separate action.
+
+## 2026-09-29 — Accumulated release acceptance
+
+**STAFF PASS: READY.** This pass covers the complete 38-file working-tree delta against fetched `origin/main`, including the MCP/OAuth delivery and the September 28 UI improvements. David completed the hosted Supabase SQL, token hook and OAuth Server configuration, connected Codex through the production consent flow, and subsequently used the authenticated MCP tools to read and make requested changes to his real library. That production acceptance supersedes the earlier pending status; revocation remains covered by the database, MCP and browser harnesses.
+
+| Gate | Result | Evidence |
+| --- | --- | --- |
+| Decisions and scope | PASS | MCP/OAuth, public setup guide, explicit connection management, all Playing games, and IGDB popular discovery are the approved accumulated delivery; no unrelated service or speculative capability was added |
+| Diff individual/accumulated | PASS | 38/38 modified or new files traced by the two delivery sections above; fetched `origin/main` matches local HEAD before commit; `git diff --check` passes |
+| Canonical imports/exports | PASS | Shared library and OAuth schemas have direct consumers; no convenience barrels or preventive version fields |
+| Reachable consumers | PASS | Web consent/Settings, Worker MCP route, database grant functions, catalog route, active-game grid and editor are all exercised by integration or browser tests |
+| Contracts and lifecycle | PASS | JWT issuer/audience/grant validation, RLS/RPC permissions, atomic library revisions, revocation, bounded payloads, provider timeouts/rate limits and cache ownership are verified |
+| Capability parity | PASS | Existing Google login, cloud library, manual/catalog add, Steam import, backup/restore, single-game hero and PWA behavior remain covered |
+| Activated audits | PASS | Security boundary, provider mapping, copy/UI, production build, responsive/axe, offline behavior, Worker packaging and secret/public-file scans completed |
+
+Current evidence: `npm run check` passed TypeScript, ESLint, 14 unit tests, 20 mocked provider calls, 50 MCP checks with the official SDK client, 94 PostgreSQL/PGlite checks and the production build. All **45 Playwright browser tests** passed after launching Chromium outside the macOS sandbox, and the production PWA scenario passed. Wrangler production dry run packaged 26 assets and a 1439 KiB Worker (264 KiB gzip). `npm audit --omit=dev` found 0 vulnerabilities. The known 706 KiB initial JavaScript chunk advisory remains non-blocking; no new Lighthouse or 60 FPS claim is made.
+
+No configured secret is tracked: `.dev.vars`, `.env.local`, browser artifacts and `.local/` remain ignored. Production publication is the authorized next action; the source push and Cloudflare Worker deployment are separate steps.

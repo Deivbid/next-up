@@ -31,11 +31,14 @@ Local SQL checks use PostgreSQL/PGlite with minimal Supabase auth role/schema st
 
 ## Local privacy checks
 
-Install a pinned test-only PostgreSQL WASM engine in the ignored tools directory (no application dependency):
+The pinned PostgreSQL WASM test engine is installed by `npm ci` as a dev dependency:
 
 ```sh
-npm_config_userconfig=.local/empty-npmrc npm_config_globalconfig=/dev/null npm install --prefix .local/sql-check --registry=https://registry.npmjs.org --cache=.local/npm-cache --ignore-scripts --no-audit --no-fund --save-exact @electric-sql/pglite@0.5.8
-node scripts/check-database.mjs
+npm run test:database
 ```
 
 PGlite is only for testing SQL locally. Production data will live in Supabase PostgreSQL.
+
+## MCP access
+
+After both library migrations, follow [MCP setup](../docs/mcp.md) to apply `202609140001_mcp_access.sql` and configure the OAuth token hook. This preserves the existing library and direct Google login.

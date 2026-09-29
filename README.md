@@ -29,3 +29,7 @@ Open **http://127.0.0.1:3030**. [Setup & checks](docs/development.md) · [API ke
 [Try Next Up](https://next-up.deivbid.workers.dev/) 🎮
 
 **This branch:** account storage is ready for local testing. Read your saved copy offline; connect to edit. Refresh to pick up changes from another device. No paid AI APIs. Steam import uses the HTTPS app. [Supabase setup](supabase/README.md).
+
+## Connect your AI 🔌
+
+Next Up includes an authenticated MCP server: look up games, get recommendations, or grant access to edit individual games. Manage access in Settings. [Setup & tools](docs/mcp.md).

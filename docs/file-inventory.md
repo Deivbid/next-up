@@ -1,10 +1,11 @@
 # Public source inventory
 
-66 source files in this inventory. The initial prototype is merged into main; this update adds the visual Steam picker and records the existing production configuration.
+97 repository files, including the authenticated app and MCP integration. Local secrets, installed skills, reference material and build output are excluded.
 
-## Root configuration and documentation (18)
+## Root configuration and documentation (19)
 
 - `.dev.vars.example`
+- `.env.example`
 - `.gitignore`
 - `.npmrc`
 - `README.md`
@@ -27,35 +28,52 @@
 
 - `design/DESIGN.md`
 
-## docs (6)
+## docs (7)
 
 - `docs/decisions.md`
 - `docs/development.md`
 - `docs/file-inventory.md`
 - `docs/integrations.md`
+- `docs/mcp.md`
 - `docs/tooling.md`
 - `docs/validation.md`
 
-## public (3)
+## public (6)
 
+- `public/.assetsignore`
+- `public/_headers`
 - `public/icon-192.png`
 - `public/icon-512.png`
 - `public/icon.svg`
+- `public/landing-today.jpg`
 
-## scripts (1)
+## scripts (3)
 
+- `scripts/check-database.mjs`
+- `scripts/check-mcp.mjs`
 - `scripts/check-worker.mjs`
 
-## shared (1)
+## shared (3)
 
 - `shared/contracts.ts`
+- `shared/library.ts`
+- `shared/mcp.ts`
 
-## src (28)
+## src (40)
 
 - `src/App.tsx`
+- `src/components/AccountGate.tsx`
+- `src/components/AiConnections.tsx`
+- `src/components/BrandLoader.tsx`
+- `src/components/ConnectGuide.tsx`
 - `src/components/Cover.tsx`
 - `src/components/GameEditor.tsx`
+- `src/components/HeroArtwork.tsx`
+- `src/components/Landing.tsx`
+- `src/components/OAuthConsent.tsx`
 - `src/components/SteamGamePicker.tsx`
+- `src/components/brand-loader.css`
+- `src/components/landing.css`
 - `src/components/ui/alert.tsx`
 - `src/components/ui/badge.tsx`
 - `src/components/ui/button.tsx`
@@ -70,10 +88,13 @@
 - `src/components/ui/toggle-group.tsx`
 - `src/components/ui/toggle.tsx`
 - `src/data/backup.ts`
+- `src/data/cloud-library.ts`
 - `src/data/db.ts`
 - `src/data/demo.ts`
 - `src/data/draft.ts`
+- `src/data/mcp-connections.ts`
 - `src/data/steam.ts`
+- `src/data/supabase.ts`
 - `src/domain/game.ts`
 - `src/domain/recommend.ts`
 - `src/lib/utils.ts`
@@ -81,18 +102,29 @@
 - `src/style.css`
 - `src/vite-env.d.ts`
 
-## tests (6)
+## supabase (4)
 
+- `supabase/README.md`
+- `supabase/migrations/202609110001_library.sql`
+- `supabase/migrations/202609110002_library_operations.sql`
+- `supabase/migrations/202609140001_mcp_access.sql`
+
+## tests (10)
+
+- `tests/browser/account.spec.ts`
 - `tests/browser/app.spec.ts`
 - `tests/browser/catalog.spec.ts`
+- `tests/browser/hero.spec.ts`
+- `tests/browser/mcp.spec.ts`
 - `tests/browser/steam.spec.ts`
+- `tests/helpers/cloud.ts`
 - `tests/pwa/offline.spec.ts`
 - `tests/unit/library.test.ts`
 - `tests/unit/providers.test.ts`
 
-## worker (2)
+## worker (4)
 
+- `worker/env.d.ts`
 - `worker/index.ts`
+- `worker/mcp.ts`
 - `worker/providers.ts`
-
-Secrets, local databases/caches, browser profiles, skill bundles, reference images and build output are excluded by `.gitignore`.

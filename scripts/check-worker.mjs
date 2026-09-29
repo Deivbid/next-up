@@ -6,7 +6,7 @@ await build({
   bundle: true,
   format: "esm",
   platform: "browser",
-  external: ["cloudflare:workers"],
+  external: ["cloudflare:workers", "node:*"],
   outfile: ".local/worker-check.mjs",
 });
 const origin = "https://nextup.example";
@@ -15,6 +15,8 @@ const ns = "http://specs.openid.net/auth/2.0";
 let valid = true;
 let providerCalls = 0;
 let artworkStatus = 200;
+let popularStatus = 200;
+let popularRows = [];
 const runtime = new Miniflare(
   convertV4MiniflareOptions({
     workers: [
@@ -47,6 +49,21 @@ const runtime = new Miniflare(
               "Bearer test-token",
             );
             const query = await request.text();
+            if (url.pathname === "/v4/popularity_primitives") {
+              assert.match(query, /popularity_type = 1/);
+              assert.match(query, /sort value desc; limit 20/);
+              return Response.json(popularStatus === 200 ? popularRows : {}, {
+                status: popularStatus,
+                headers: { "Retry-After": "12" },
+              });
+            }
+            if (query.startsWith("where id = (")) {
+              assert.match(query, /where id = \(2,1\)/);
+              return Response.json([
+                { id: 1, name: "First ID" },
+                { id: 2, name: "Most popular" },
+              ]);
+            }
             if (query.startsWith("search"))
               return Response.json([{ id: 1, name: "Test game" }]);
             assert.match(query, /^where id = 123;/);
@@ -221,6 +238,41 @@ try {
     cover: "",
     genres: [],
   });
+  for (const status of [429, 401, 500]) {
+    await new Promise((resolve) => setTimeout(resolve, 720));
+    popularStatus = status;
+    const response = await call("/api/catalog/popular");
+    assert.equal(response.status, status === 429 ? 429 : 502);
+    assert.equal(response.headers.get("Cache-Control"), "no-store");
+    if (status === 429) assert.equal(response.headers.get("Retry-After"), "12");
+  }
+  popularStatus = 200;
+  await new Promise((resolve) => setTimeout(resolve, 720));
+  assert.deepEqual(await (await call("/api/catalog/popular")).json(), {
+    games: [],
+  });
+  popularRows = [{ game_id: "invalid", value: 1 }];
+  await new Promise((resolve) => setTimeout(resolve, 720));
+  assert.equal((await call("/api/catalog/popular")).status, 502);
+  popularRows = [
+    { game_id: 2, value: 10 },
+    { game_id: 1, value: 5 },
+    { game_id: 2, value: 2 },
+  ];
+  await new Promise((resolve) => setTimeout(resolve, 720));
+  const popular = await call("/api/catalog/popular");
+  assert.equal(popular.status, 200);
+  const popularBody = await popular.json();
+  assert.deepEqual(
+    popularBody.games.map((g) => g.igdbId),
+    [2, 1],
+  );
+  const beforeCache = providerCalls;
+  assert.deepEqual(
+    await (await call("/api/catalog/popular")).json(),
+    popularBody,
+  );
+  assert.equal(providerCalls, beforeCache);
   console.log(
     `Worker checks passed: browser-bound login, discovery + direct verification, replay rejection, session import and CSRF-safe logout. ${providerCalls} mocked provider calls; no external authentication.`,
   );

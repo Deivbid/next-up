@@ -24,9 +24,12 @@ export function Landing({
           <IconDeviceGamepad2 aria-hidden="true" />
           Next Up
         </a>
-        <Button variant="ghost" onClick={onLogin} disabled={busy}>
-          Log in <IconArrowUpRight aria-hidden="true" />
-        </Button>
+        <nav className="landing-nav" aria-label="Main">
+          <a href="/connect">Connect your AI</a>
+          <Button variant="ghost" onClick={onLogin} disabled={busy}>
+            Log in <IconArrowUpRight aria-hidden="true" />
+          </Button>
+        </nav>
       </header>
       <main id="landing-main">
         <section className="landing-hero landing-shell">

@@ -1,3 +1,4 @@
+import { handleMcp } from "./mcp";
 import { DurableObject } from "cloudflare:workers";
 import { z } from "zod";
 import { providerSchema } from "../shared/contracts";
@@ -12,13 +13,7 @@ import {
   validateAssertion,
   validateDiscovery,
 } from "./providers";
-interface Env {
-  AUTH: DurableObjectNamespace<IntegrationState>;
-  APP_ORIGIN: string;
-  TWITCH_CLIENT_ID?: string;
-  TWITCH_CLIENT_SECRET?: string;
-  STEAM_WEB_API_KEY?: string;
-}
+type Env = WorkerBindings;
 const json = (
   body: unknown,
   status = 200,
@@ -57,11 +52,20 @@ const setCookie = (name: string, value: string, age: number) =>
 export class IntegrationState extends DurableObject<Env> {
   private active = 0;
   private token?: { value: string; expires: number };
+  private popular?: { value: ReturnType<typeof mapCatalog>; expires: number };
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     ctx.storage.sql.exec(
       "CREATE TABLE IF NOT EXISTS technical_state (key TEXT PRIMARY KEY, value TEXT NOT NULL, expires INTEGER NOT NULL)",
     );
+  }
+  async mcpLimit(userId: string) {
+    const bucket = Math.floor(Date.now() / 60000);
+    const key = `mcp-rate:${await hash(userId)}:${bucket}`;
+    const count = z.number().parse(this.get(key) ?? 0);
+    if (count >= 60) return false;
+    this.put(key, count + 1, 120000);
+    return true;
   }
   private put(key: string, value: unknown, ttl: number) {
     this.ctx.storage.sql.exec(
@@ -102,7 +106,7 @@ export class IntegrationState extends DurableObject<Env> {
   private remove(key: string) {
     this.ctx.storage.sql.exec("DELETE FROM technical_state WHERE key=?", key);
   }
-  private gate() {
+  private gate(cost = 1) {
     const now = Date.now();
     const previous = z.number().optional().parse(this.get("rate:last")) ?? 0;
     if (now - previous < 350 || this.active >= 6)
@@ -113,9 +117,10 @@ export class IntegrationState extends DurableObject<Env> {
         .number()
         .optional()
         .parse(this.get(`daily:${date}`)) ?? 0;
-    if (count >= 5000) throw new ProviderError(429, "daily_limit", "3600");
-    this.put("rate:last", now, 1000);
-    this.put(`daily:${date}`, count + 1, 86400000);
+    if (count + cost > 5000)
+      throw new ProviderError(429, "daily_limit", "3600");
+    this.put("rate:last", now + 350 * (cost - 1), 1000);
+    this.put(`daily:${date}`, count + cost, 86400000);
   }
   private async session(request: Request) {
     const token = cookie(request, "__Host-nextup-session");
@@ -165,6 +170,7 @@ export class IntegrationState extends DurableObject<Env> {
     if (
       ![
         "/api/catalog",
+        "/api/catalog/popular",
         "/api/artwork",
         "/api/steam/login",
         "/api/steam/callback",
@@ -172,17 +178,31 @@ export class IntegrationState extends DurableObject<Env> {
       ].includes(url.pathname)
     )
       return json({ error: "not_found" }, 404);
+    if (
+      url.pathname === "/api/catalog/popular" &&
+      catalog &&
+      this.popular &&
+      this.popular.expires > Date.now()
+    )
+      return json(this.popular.value, 200, {
+        "Cache-Control": `public, max-age=${Math.max(0, Math.floor((this.popular.expires - Date.now()) / 1000))}`,
+      });
     try {
-      this.gate();
+      this.gate(url.pathname === "/api/catalog/popular" ? 2 : 1);
     } catch (e) {
       return this.failure(e);
     }
     this.active++;
     const signal = AbortSignal.timeout(8000);
     try {
-      if (url.pathname === "/api/catalog" || url.pathname === "/api/artwork") {
+      if (
+        url.pathname === "/api/catalog" ||
+        url.pathname === "/api/catalog/popular" ||
+        url.pathname === "/api/artwork"
+      ) {
         if (!catalog) return json({ error: "catalog_not_configured" }, 503);
         const isArtwork = url.pathname === "/api/artwork";
+        const isPopular = url.pathname === "/api/catalog/popular";
         let query: string;
         if (isArtwork) {
           const id = z.coerce
@@ -193,6 +213,8 @@ export class IntegrationState extends DurableObject<Env> {
             .safeParse(url.searchParams.get("igdbId"));
           if (!id.success) return json({ error: "invalid_game_id" }, 400);
           query = `where id = ${id.data}; fields artworks.image_id,artworks.width,artworks.height,screenshots.image_id,screenshots.width,screenshots.height; limit 1;`;
+        } else if (isPopular) {
+          query = "";
         } else {
           const q = z
             .string()
@@ -226,6 +248,34 @@ export class IntegrationState extends DurableObject<Env> {
             expires: Date.now() + auth.expires_in * 1000,
           };
         }
+        let popularIds: number[] = [];
+        if (isPopular) {
+          const ranking = await upstream(
+            "https://api.igdb.com/v4/popularity_primitives",
+            {
+              method: "POST",
+              headers: {
+                "Client-ID": this.env.TWITCH_CLIENT_ID!,
+                Authorization: `Bearer ${this.token.value}`,
+                "Content-Type": "text/plain",
+              },
+              body: "fields game_id,value; sort value desc; limit 20; where popularity_type = 1;",
+            },
+            signal,
+          );
+          const rows = z
+            .array(
+              z.object({
+                game_id: z.number().int().positive().safe(),
+                value: z.number().finite(),
+              }),
+            )
+            .max(20)
+            .parse(await ranking.json());
+          popularIds = [...new Set(rows.map((row) => row.game_id))];
+          if (!popularIds.length) return json({ games: [] });
+          query = `where id = (${popularIds.join(",")}); fields name,cover.image_id,genres.name; limit 20;`;
+        }
         const r = await upstream(
           "https://api.igdb.com/v4/games",
           {
@@ -239,11 +289,20 @@ export class IntegrationState extends DurableObject<Env> {
           },
           signal,
         );
-        return isArtwork
-          ? json(mapArtwork(await r.json()), 200, {
-              "Cache-Control": "public, max-age=86400",
-            })
-          : json(mapCatalog(await r.json()));
+        if (isArtwork)
+          return json(mapArtwork(await r.json()), 200, {
+            "Cache-Control": "public, max-age=86400",
+          });
+        const result = mapCatalog(await r.json());
+        if (isPopular) {
+          // The games endpoint does not retain the ranking's order.
+          result.games = popularIds.flatMap((id) =>
+            result.games.filter((game) => game.igdbId === id),
+          );
+          this.popular = { value: result, expires: Date.now() + 3600000 };
+          return json(result, 200, { "Cache-Control": "public, max-age=3600" });
+        }
+        return json(result);
       }
       if (!steam) return json({ error: "steam_requires_key_and_https" }, 503);
       if (url.pathname === "/api/steam/login") {
@@ -346,7 +405,9 @@ export class IntegrationState extends DurableObject<Env> {
       return json(mapSteam(await result.json()));
     } catch (error) {
       if (
-        (url.pathname === "/api/catalog" || url.pathname === "/api/artwork") &&
+        (url.pathname === "/api/catalog" ||
+          url.pathname === "/api/catalog/popular" ||
+          url.pathname === "/api/artwork") &&
         error instanceof ProviderError &&
         error.code === "provider_authentication_failed"
       )
@@ -372,8 +433,24 @@ export class IntegrationState extends DurableObject<Env> {
   }
 }
 export default {
-  async fetch(request: Request, env: Env) {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext) {
     const url = new URL(request.url);
+    if (
+      url.pathname === "/api/mcp" ||
+      url.pathname === "/.well-known/oauth-protected-resource/api/mcp" ||
+      url.pathname === "/.well-known/oauth-protected-resource"
+    ) {
+      const integration = env.AUTH.get(env.AUTH.idFromName("integrations"));
+      return handleMcp(request, env, ctx, {
+        limit: (userId) => integration.mcpLimit(userId),
+        catalog: (query) =>
+          integration.fetch(
+            new Request(
+              `${env.APP_ORIGIN}/api/catalog?q=${encodeURIComponent(query)}`,
+            ),
+          ),
+      });
+    }
     if (url.pathname.startsWith("/api/"))
       return env.AUTH.get(env.AUTH.idFromName("integrations")).fetch(request);
     return json({ error: "not_found" }, 404);

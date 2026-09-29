@@ -396,37 +396,60 @@ export default function App({
               ) : (
                 <>
                   {current.length > 0 && (
-                    <section
-                      aria-labelledby="current-heading"
-                      className="current-game"
-                    >
-                      <div className="current-copy">
-                        <p id="current-heading" className="eyebrow">
-                          Currently playing
-                          {current.length > 1
-                            ? ` · ${current.length} games`
-                            : ""}
-                        </p>
-                        <h2>{current[0].title}</h2>
-                        <p>
-                          <IconDeviceDesktop aria-hidden="true" />
-                          {current[0].devices.join(" · ") || "Choose a device"}
-                        </p>
-                        {current[0].notes && (
-                          <p className="current-note">{current[0].notes}</p>
-                        )}
-                        <Button onClick={() => setEditor(current[0])}>
-                          View game
-                          <IconArrowRight
-                            data-icon="inline-end"
-                            aria-hidden="true"
-                          />
-                        </Button>
+                    <section aria-labelledby="current-heading">
+                      <div className="section-heading">
+                        <h2 id="current-heading">Currently playing</h2>
+                        <span className="quiet">
+                          {current.length}{" "}
+                          {current.length === 1 ? "game" : "games"} in progress
+                        </span>
                       </div>
-                      <HeroArtwork
-                        key={`${current[0].id}:${current[0].steamId}:${current[0].igdbId}:${current[0].cover}`}
-                        game={current[0]}
-                      />
+                      <div
+                        className={
+                          current.length > 1
+                            ? "current-games current-games-multiple"
+                            : "current-games"
+                        }
+                      >
+                        {current.map((game) => (
+                          <article
+                            className="current-game"
+                            key={game.id}
+                            aria-label={game.title}
+                          >
+                            <div className="current-copy">
+                              <h3>{game.title}</h3>
+                              <p>
+                                <IconDeviceDesktop aria-hidden="true" />
+                                {game.devices.join(" · ") || "Choose a device"}
+                              </p>
+                              {game.notes && (
+                                <p className="current-note">{game.notes}</p>
+                              )}
+                              <Button
+                                onClick={() => setEditor(game)}
+                                aria-label={`View game: ${game.title}`}
+                              >
+                                View game
+                                <IconArrowRight
+                                  data-icon="inline-end"
+                                  aria-hidden="true"
+                                />
+                              </Button>
+                            </div>
+                            {current.length === 1 ? (
+                              <HeroArtwork
+                                key={`${game.id}:${game.steamId}:${game.igdbId}:${game.cover}`}
+                                game={game}
+                              />
+                            ) : (
+                              <div className="current-cover">
+                                <Cover game={game} />
+                              </div>
+                            )}
+                          </article>
+                        ))}
+                      </div>
                     </section>
                   )}
                   <section

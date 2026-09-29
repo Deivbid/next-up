@@ -252,7 +252,7 @@
   z-index: 1;
   align-self: center;
 }
-.current-copy h2 {
+.current-copy h3 {
   font-size: 36px;
   margin: 8px 0 12px;
 }
@@ -847,7 +847,7 @@
   .library-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-  .current-copy h2 {
+  .current-copy h3 {
     font-size: 30px;
   }
   .settings-grid {
@@ -931,7 +931,7 @@
     width: 100%;
     order: 1;
   }
-  .current-copy h2 {
+  .current-copy h3 {
     font-size: 27px;
   }
   .current-copy > p:not(.eyebrow) {
@@ -1084,4 +1084,444 @@
 
 .library-loading {
   min-height: 70vh;
+}
+
+/* AI connection guide and consent reuse the app's palette and controls. */
+.connection-page {
+  min-height: 100dvh;
+  background: var(--background);
+  color: var(--foreground);
+}
+.connection-header,
+.connect-main,
+.connection-footer {
+  width: min(1160px, calc(100% - 48px));
+  margin-inline: auto;
+}
+.connection-header {
+  min-height: 94px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  border-bottom: 1px solid var(--border);
+}
+.connection-header nav,
+.connection-header > a:last-child,
+.landing-nav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.connection-header nav a,
+.connection-header > a:last-child,
+.landing-nav > a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 14px;
+}
+.connection-header a[aria-current] {
+  color: var(--primary);
+}
+.connect-intro {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 72px;
+  align-items: center;
+  padding-block: 88px;
+}
+.connect-intro h1 {
+  font-size: clamp(40px, 5vw, 70px);
+  line-height: 1.06;
+  letter-spacing: -0.055em;
+  font-weight: 600;
+  margin: 20px 0 26px;
+  text-wrap: balance;
+}
+.connect-intro h1 span {
+  color: var(--primary);
+}
+.connect-intro p,
+.connect-setup p,
+.connect-reference p,
+.connect-control p,
+.consent-panel p {
+  line-height: 1.7;
+  max-width: 60ch;
+  color: var(--muted-foreground);
+}
+.connect-intro .eyebrow {
+  color: var(--primary);
+}
+.connection-doc-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--primary);
+  text-underline-offset: 5px;
+}
+.connection-doc-link:hover {
+  text-decoration: underline;
+}
+.connect-example {
+  padding: 32px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--card);
+}
+.connect-example > svg {
+  color: var(--primary);
+  width: 32px;
+  height: 32px;
+  margin-bottom: 32px;
+}
+.connect-example blockquote {
+  font-size: clamp(23px, 2.4vw, 32px);
+  line-height: 1.4;
+  letter-spacing: -0.02em;
+  margin: 16px 0 26px;
+}
+.connect-example p {
+  font-size: 14px;
+}
+.connection-label {
+  display: inline-block;
+  border-top: 1px solid var(--border);
+  width: 100%;
+  padding-top: 20px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.connect-setup,
+.connect-reference {
+  display: grid;
+  grid-template-columns: 0.8fr 1.3fr;
+  gap: 90px;
+  border-top: 1px solid var(--border);
+  padding-block: 64px;
+  scroll-margin-top: 24px;
+}
+.connect-main h2 {
+  font-size: clamp(26px, 3vw, 36px);
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+  margin-block: 0 24px;
+}
+.connect-setup ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 40px;
+}
+.connect-setup li {
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  gap: 20px;
+}
+.step-number {
+  color: var(--primary);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  padding-top: 4px;
+}
+.connect-setup h3 {
+  font-size: 19px;
+  margin: 0;
+}
+.endpoint-copy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  margin-block: 20px;
+}
+.endpoint-copy code {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.endpoint-copy button {
+  flex-shrink: 0;
+}
+.connect-reference dl {
+  margin: 0;
+  display: grid;
+  gap: 32px;
+}
+.connect-reference dt {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.connect-reference dd {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 2;
+}
+.connect-reference code {
+  color: var(--primary);
+}
+.connect-reference dd p {
+  margin: 8px 0 0;
+  font-size: 14px;
+}
+.connect-control {
+  padding: 32px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  display: flex;
+  gap: 32px;
+  justify-content: space-between;
+  align-items: center;
+}
+.connect-control h2 {
+  font-size: 26px;
+  margin-bottom: 12px;
+}
+.connect-control p {
+  margin-bottom: 0;
+  font-size: 14px;
+}
+.connection-footnote {
+  font-size: 12px;
+  line-height: 1.7;
+  max-width: 85ch;
+  color: var(--muted-foreground);
+  margin-block: 28px 64px;
+}
+.connection-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-top: 1px solid var(--border);
+  padding-block: 24px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.connection-footer a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.consent-panel {
+  width: min(580px, calc(100% - 40px));
+  margin: 64px auto;
+  padding: 32px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--card);
+}
+.consent-panel h1 {
+  font-size: 32px;
+  letter-spacing: -0.035em;
+  overflow-wrap: anywhere;
+}
+.consent-icon {
+  color: var(--primary);
+  width: 36px;
+  height: 36px;
+  margin-bottom: 24px;
+}
+.consent-account {
+  overflow-wrap: anywhere;
+}
+.permission-choice {
+  padding-block: 24px;
+  border-block: 1px solid var(--border);
+  margin-block: 24px;
+}
+.permission-choice > span {
+  display: block;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+.permission-choice p,
+.connection-muted {
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+.consent-destination {
+  display: grid;
+  gap: 8px;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+.consent-destination small {
+  color: var(--muted-foreground);
+  line-height: 1.6;
+}
+.connection-error {
+  color: var(--destructive) !important;
+  line-height: 1.6;
+}
+.ai-connections ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.ai-connections li {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding-block: 16px;
+  border-top: 1px solid var(--border);
+}
+.ai-connections li div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.ai-connections li span {
+  display: block;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin-top: 6px;
+}
+.connection-page a:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 5px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .connect-intro,
+  .consent-panel {
+    animation: connection-enter 0.35s ease-out both;
+  }
+  @keyframes connection-enter {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+@media (max-width: 800px) {
+  .connect-intro,
+  .connect-setup,
+  .connect-reference {
+    grid-template-columns: 1fr;
+    gap: 36px;
+    padding-block: 44px;
+  }
+  .connection-header {
+    min-height: 84px;
+  }
+  .connection-header nav,
+  .landing-nav {
+    gap: 12px;
+  }
+  .connect-control {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+@media (max-width: 480px) {
+  .connection-header,
+  .connect-main,
+  .connection-footer {
+    width: calc(100% - 32px);
+  }
+  .connection-header {
+    flex-wrap: wrap;
+    gap: 4px;
+    padding-block: 14px;
+  }
+  .connection-header nav {
+    width: 100%;
+  }
+  .landing .brand {
+    font-size: 21px;
+  }
+  .landing-nav {
+    gap: 4px;
+  }
+  .landing-nav > a {
+    font-size: 12px;
+  }
+  .landing-nav button {
+    padding-inline: 8px;
+  }
+  .landing-nav button svg {
+    display: none;
+  }
+  .connect-example,
+  .connect-control,
+  .consent-panel {
+    padding: 22px;
+  }
+  .consent-panel {
+    margin-block: 32px;
+  }
+  .endpoint-copy {
+    flex-wrap: wrap;
+  }
+  .connect-setup li {
+    gap: 10px;
+    grid-template-columns: 24px 1fr;
+  }
+  .ai-connections li {
+    flex-wrap: wrap;
+  }
+}
+
+/* Several active games stay visible without fetching a banner for each one. */
+.current-games {
+  display: grid;
+  gap: 20px;
+}
+.current-games-multiple {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.current-games-multiple .current-game {
+  grid-template-columns: minmax(0, 1fr) 130px;
+  min-height: 220px;
+}
+.current-games-multiple .current-copy {
+  padding: 24px;
+  min-width: 0;
+}
+.current-games-multiple .current-copy h3 {
+  font-size: 24px;
+  overflow-wrap: anywhere;
+}
+.current-cover {
+  align-self: stretch;
+  padding: 16px 16px 16px 0;
+  display: grid;
+  align-items: center;
+}
+.current-cover .cover {
+  width: 100%;
+}
+.current-games-multiple .current-copy > p {
+  flex-wrap: wrap;
+}
+@media (max-width: 760px) {
+  .current-games-multiple {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .current-games-multiple .current-game {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 100px;
+    min-height: 180px;
+  }
+  .current-games-multiple .current-copy {
+    order: 0;
+    padding: 20px 16px;
+  }
+  .current-games-multiple .current-copy h3 {
+    font-size: 21px;
+  }
 }

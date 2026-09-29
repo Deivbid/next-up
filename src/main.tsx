@@ -1,5 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
+import { ConnectGuide } from "./components/ConnectGuide";
 import { AccountGate } from "./components/AccountGate";
 import "@fontsource-variable/geist";
 import "./style.css";
@@ -29,7 +30,7 @@ class StorageBoundary extends React.Component<
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <StorageBoundary>
-      <AccountGate />
+      {location.pathname === "/connect" ? <ConnectGuide /> : <AccountGate />}
     </StorageBoundary>
   </React.StrictMode>,
 );

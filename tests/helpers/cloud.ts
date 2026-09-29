@@ -1,7 +1,7 @@
 import { test as base, type BrowserContext } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { defaultPreferences } from "../../src/domain/game";
-import type { LibrarySnapshot } from "../../src/data/cloud-library";
+import type { LibrarySnapshot } from "../../shared/library";
 export const userId = "11111111-1111-4111-8111-111111111111";
 const env = readFileSync(".env.local", "utf8");
 export const apiUrl = env
@@ -105,6 +105,9 @@ export async function mockCloud(
       json: { error: "Unexpected test endpoint" },
     });
   });
+  await context.route("**/api/catalog/popular", (route) =>
+    route.fulfill({ json: { games: [] } }),
+  );
   await context.route("**/api/providers", (route) =>
     route.fulfill({ json: { catalog: true, steam: false, connected: false } }),
   );

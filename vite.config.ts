@@ -31,7 +31,7 @@ export default defineConfig({
       workbox: {
         globPatterns: ["**/*.{js,css,html,woff2,png,svg,jpg}"],
         globIgnores: ["concepts/**"],
-        navigateFallbackDenylist: [/^\/api\//],
+        navigateFallbackDenylist: [/^\/api\//, /^\/\.well-known\//],
         runtimeCaching: [
           {
             urlPattern:
@@ -48,5 +48,10 @@ export default defineConfig({
     }),
   ],
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
-  server: { proxy: { "/api": { target: "http://127.0.0.1:8787" } } },
+  server: {
+    proxy: {
+      "/.well-known": { target: "http://127.0.0.1:8787" },
+      "/api": { target: "http://127.0.0.1:8787" },
+    },
+  },
 });

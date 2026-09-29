@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { PGlite } from "../.local/sql-check/node_modules/@electric-sql/pglite/dist/index.js";
+import { PGlite } from "@electric-sql/pglite";
 
 // Local PostgreSQL test harness; no credentials, network calls or hosted writes.
 const db = new PGlite();
@@ -37,6 +37,7 @@ const insertGame = `insert into public.library_games
   values ($1, 'Papers, Please', 'owned', 'Backlog', 'short', 239030, 1)`;
 try {
   await db.exec(`
+    create role supabase_auth_admin;
     create role anon;
     create role authenticated;
     create schema auth;
@@ -45,6 +46,9 @@ try {
     create function auth.uid() returns uuid language sql stable as $$
       select coalesce(current_setting('request.jwt.claim.sub', true),
         (current_setting('request.jwt.claims', true)::jsonb ->> 'sub'))::uuid
+    $$;
+    create function auth.jwt() returns jsonb language sql stable as $$
+      select current_setting('request.jwt.claims', true)::jsonb
     $$;
     grant usage on schema public, auth to anon, authenticated;
     alter default privileges in schema public grant all on tables to anon, authenticated;
@@ -392,6 +396,162 @@ try {
   await db.exec("reset role;set role anon");
   await denied("select public.next_up_read_library()");
   await denied("select public.next_up_change_library(0)");
+  await db.exec("reset role");
+  await db.exec(
+    await readFile("supabase/migrations/202609140001_mcp_access.sql", "utf8"),
+  );
+  const clientId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+  const resource = "https://next-up.deivbid.workers.dev/api/mcp";
+  const grant = `select public.next_up_set_mcp_connection($1,'My AI',$2,$3)`;
+  const claims = async (value) =>
+    query("select set_config('request.jwt.claims',$1,false)", [
+      JSON.stringify(value),
+    ]);
+  const hook = async (id, client) => {
+    await db.exec("reset role; set role supabase_auth_admin");
+    const result = await scalar(
+      "select public.next_up_mcp_token_hook($1::jsonb) as value",
+      [
+        JSON.stringify({
+          user_id: id,
+          claims: {
+            sub: id,
+            role: "authenticated",
+            aud: "authenticated",
+            ...(client ? { client_id: client } : {}),
+          },
+        }),
+      ],
+    );
+    await db.exec("reset role; set role authenticated");
+    return result.claims;
+  };
+  await asUser(newUser);
+  const beforeMcp = await snapshot();
+  check(beforeMcp.games.length, 1, "MCP migration preserves web library");
+  await query(grant, [clientId, "read", resource]);
+  check(
+    await scalar("select count(*)::int as value from public.mcp_connections"),
+    1,
+    "Web can see its connection",
+  );
+  const readClaims = await hook(newUser, clientId);
+  check(
+    readClaims.aud,
+    ["authenticated", resource],
+    "Hook issues explicit Supabase and MCP audiences",
+  );
+  await claims(readClaims);
+  check((await snapshot()).games.length, 1, "Read-only MCP sees own games");
+  check(
+    await scalar("select count(*)::int as value from public.mcp_connections"),
+    0,
+    "MCP cannot read connection administration table",
+  );
+  await denied(grant, [clientId, "write", resource]);
+  await denied("select next_up_private.next_up_read_library()");
+  await denied(mutate, [
+    beforeMcp.revision,
+    JSON.stringify([changedGame]),
+    null,
+    [],
+    false,
+  ]);
+  check(
+    await scalar("select public.next_up_mcp_access() as value"),
+    { permission: "read" },
+    "MCP permission is verified in DB",
+  );
+  await claims({ ...readClaims, sub: bob });
+  await denied("select public.next_up_read_library()");
+  check(
+    await scalar("select count(*)::int as value from public.library_games"),
+    0,
+    "Another owner cannot use the grant via REST",
+  );
+  await asUser(newUser);
+  await query(grant, [clientId, "write", resource]);
+  const writeClaims = await hook(newUser, clientId);
+  await claims(readClaims);
+  await denied("select public.next_up_read_library()");
+  await claims(writeClaims);
+  const current = await snapshot();
+  const gameUpdate = {
+    ...current.games[0],
+    devices: ["PC", "PS5"],
+    notes: "MCP edit",
+  };
+  const after = await scalar(mutate, [
+    current.revision,
+    JSON.stringify([gameUpdate]),
+    null,
+    [],
+    false,
+  ]);
+  check(
+    after.games[0].devices,
+    ["PC", "PS5"],
+    "MCP update preserves multiple devices",
+  );
+  await denied(
+    mutate,
+    [current.revision, JSON.stringify([gameUpdate]), null, [], false],
+    "PT409",
+  );
+  await denied(mutate, [after.revision, "[]", null, [], true]);
+  await denied(mutate, [
+    after.revision,
+    "[]",
+    JSON.stringify({ id: "preferences", devices: [], theme: "light" }),
+    [],
+    false,
+  ]);
+  await denied(mutate, [
+    after.revision,
+    JSON.stringify([gameUpdate]),
+    null,
+    [gameUpdate.id],
+    false,
+  ]);
+  await asUser(newUser);
+  await query(grant, [clientId, null, resource]);
+  await claims(writeClaims);
+  await denied("select public.next_up_read_library()");
+  await denied(mutate, [
+    after.revision,
+    JSON.stringify([gameUpdate]),
+    null,
+    [],
+    false,
+  ]);
+  check(
+    await scalar("select count(*)::int as value from public.library_games"),
+    0,
+    "Revoked JWT cannot bypass MCP through direct REST reads",
+  );
+  await denied("select public.next_up_mcp_token_hook('{}')");
+  const noGrant = await hook(newUser, clientId);
+  check(noGrant.aud, "authenticated", "No grant means no MCP audience");
+  check(
+    noGrant.next_up_grant,
+    undefined,
+    "No grant generation after revocation",
+  );
+  await asUser(newUser);
+  await query(grant, [clientId, "write", resource]);
+  await claims(writeClaims);
+  await denied("select public.next_up_read_library()");
+  const webClaims = await hook(newUser);
+  check(
+    webClaims,
+    { sub: newUser, role: "authenticated", aud: "authenticated" },
+    "Hook leaves Google/web sessions unchanged",
+  );
+  await claims(webClaims);
+  check((await snapshot()).games[0].notes, "MCP edit", "Web sees MCP changes");
+  await db.exec("reset role; set role anon");
+  await denied("select public.next_up_mcp_access()");
+  await denied(grant, [clientId, "write", resource]);
   console.log(
     `PASS: ${checks} database checks (local PostgreSQL/PGlite; hosted auth not exercised).`,
   );

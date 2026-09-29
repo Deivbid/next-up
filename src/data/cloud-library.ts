@@ -1,28 +1,17 @@
-import Dexie, { type Table } from "dexie";
+import {
+  librarySnapshotSchema,
+  type LibrarySnapshot,
+} from "../../shared/library";
 import { z } from "zod";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   gameSchema,
   preferencesSchema,
   type Game,
   type Preferences,
 } from "../domain/game";
+import Dexie, { type Table } from "dexie";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-export const librarySnapshotSchema = z
-  .object({
-    games: z.array(gameSchema).max(20000),
-    preferences: preferencesSchema,
-    revision: z.number().int().nonnegative().safe(),
-  })
-  .strict()
-  .superRefine(({ games }, ctx) => {
-    for (const key of ["id", "steamId", "igdbId"] as const) {
-      const values = games.map((g) => g[key]).filter((v) => v !== undefined);
-      if (new Set(values).size !== values.length)
-        ctx.addIssue({ code: "custom", message: `Duplicate ${key}` });
-    }
-  });
-export type LibrarySnapshot = z.infer<typeof librarySnapshotSchema>;
 export type LibraryChange = {
   games?: Game[];
   preferences?: Preferences;

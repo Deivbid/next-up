@@ -1,3 +1,5 @@
+import { OAuthConsent } from "./OAuthConsent";
+import { AiConnections } from "./AiConnections";
 import {
   lazy,
   Suspense,
@@ -87,33 +89,36 @@ function AccountLibrary({
         ),
     ) ?? [];
   const profile = (
-    <section className="account-profile" aria-labelledby="profile-heading">
-      <h2 id="profile-heading">Profile</h2>
-      <p>Signed in with Google</p>
-      <p className="profile-email">{email || "Your account"}</p>
-      <div className="button-row">
-        <Button
-          variant="outline"
-          disabled={state.busy}
-          onClick={() => void library.refresh()}
-        >
-          Refresh library
-        </Button>
-        <Button
-          variant="ghost"
-          disabled={state.busy}
-          onClick={() =>
-            void onLogout().catch(() =>
-              setError(
-                "Could not sign out. Check your connection and try again.",
-              ),
-            )
-          }
-        >
-          Sign out
-        </Button>
-      </div>
-    </section>
+    <>
+      <section className="account-profile" aria-labelledby="profile-heading">
+        <h2 id="profile-heading">Profile</h2>
+        <p>Signed in with Google</p>
+        <p className="profile-email">{email || "Your account"}</p>
+        <div className="button-row">
+          <Button
+            variant="outline"
+            disabled={state.busy}
+            onClick={() => void library.refresh()}
+          >
+            Refresh library
+          </Button>
+          <Button
+            variant="ghost"
+            disabled={state.busy}
+            onClick={() =>
+              void onLogout().catch(() =>
+                setError(
+                  "Could not sign out. Check your connection and try again.",
+                ),
+              )
+            }
+          >
+            Sign out
+          </Button>
+        </div>
+      </section>
+      <AiConnections userId={library.userId} />
+    </>
   );
   const notices = (
     <>
@@ -290,34 +295,43 @@ export function AccountGate() {
         <BrandLoader />
       </main>
     );
-  if (session) return <SignedIn key={session.user.id} session={session} />;
-  return (
-    <Landing
-      busy={busy}
-      error={error}
-      onLogin={() => {
-        if (!supabase) {
-          setError("Sign-in is not configured in this build.");
-          return;
+  function login() {
+    if (!supabase) {
+      setError("Sign-in is not configured in this build.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    void supabase.auth
+      .signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo:
+            location.origin +
+            (location.pathname === "/oauth/consent" ? "/oauth/consent" : "/"),
+        },
+      })
+      .then(({ error }) => {
+        if (error) {
+          setBusy(false);
+          setError("Could not open Google sign-in. Please try again.");
         }
-        setBusy(true);
-        setError("");
-        void supabase.auth
-          .signInWithOAuth({
-            provider: "google",
-            options: { redirectTo: location.origin + "/" },
-          })
-          .then(({ error }) => {
-            if (error) {
-              setBusy(false);
-              setError("Could not open Google sign-in. Please try again.");
-            }
-          })
-          .catch(() => {
-            setBusy(false);
-            setError("Could not open Google sign-in. Check your connection.");
-          });
-      }}
-    />
-  );
+      })
+      .catch(() => {
+        setBusy(false);
+        setError("Could not open Google sign-in. Check your connection.");
+      });
+  }
+  if (location.pathname === "/oauth/consent")
+    return (
+      <OAuthConsent
+        key={session?.user.id ?? "guest"}
+        session={session}
+        onLogin={login}
+        loginBusy={busy}
+        loginError={error}
+      />
+    );
+  if (session) return <SignedIn key={session.user.id} session={session} />;
+  return <Landing busy={busy} error={error} onLogin={login} />;
 }

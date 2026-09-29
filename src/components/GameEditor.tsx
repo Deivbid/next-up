@@ -43,7 +43,9 @@ export function GameEditor({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [results, setResults] = useState<CatalogGame[]>([]);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initial.title.trim());
+  const [catalogSelected, setCatalogSelected] = useState(false);
+  const popular = query.length === 0;
   const [searchStatus, setSearchStatus] = useState("");
   const [discard, setDiscard] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -73,7 +75,8 @@ export function GameEditor({
   }
   useEffect(() => {
     if (
-      query.length < 2 ||
+      (query.length > 0 && query.length < 2) ||
+      catalogSelected ||
       query.length > 100 ||
       existing ||
       discard ||
@@ -82,10 +85,12 @@ export function GameEditor({
       return;
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
-      setSearchStatus("Searching…");
+      setSearchStatus(popular ? "Loading popular games…" : "Searching…");
       try {
         const response = await fetch(
-          `/api/catalog?q=${encodeURIComponent(query)}`,
+          popular
+            ? "/api/catalog/popular"
+            : `/api/catalog?q=${encodeURIComponent(query)}`,
           {
             signal: AbortSignal.any([
               controller.signal,
@@ -97,15 +102,25 @@ export function GameEditor({
         const games = catalogSchema.parse(await response.json()).games;
         if (controller.signal.aborted) return;
         setResults(games);
-        setSearchStatus(
-          games.length
-            ? `${games.length} ${games.length === 1 ? "match" : "matches"}. Choose a title below.`
-            : "No matches. You can still add this game manually.",
-        );
+        if (popular) {
+          setSearchStatus(
+            games.length
+              ? "Popular on IGDB · Based on page visits. Choose a title below."
+              : "No popular games available. Search or enter a title yourself.",
+          );
+        } else {
+          setSearchStatus(
+            games.length
+              ? `${games.length} ${games.length === 1 ? "match" : "matches"}. Choose a title below.`
+              : "No matches. You can still add this game manually.",
+          );
+        }
       } catch {
         if (controller.signal.aborted) return;
         setSearchStatus(
-          "Catalog search is unavailable. You can still add this game manually.",
+          popular
+            ? "Popular games are unavailable. Search or enter a title yourself."
+            : "Catalog search is unavailable. You can still add this game manually.",
         );
       }
     }, 400);
@@ -113,7 +128,7 @@ export function GameEditor({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [query, existing, discard, deleting]);
+  }, [query, existing, discard, deleting, catalogSelected, popular]);
   async function save(event: FormEvent) {
     event.preventDefault();
     setError("");
@@ -162,7 +177,7 @@ export function GameEditor({
           <DialogDescription>
             {existing
               ? "Your pace. Your way to play."
-              : "Search the catalog or enter a title yourself."}
+              : "Pick a popular game, search the catalog or enter a title yourself."}
           </DialogDescription>
         </DialogHeader>
         {discard ? (
@@ -230,6 +245,7 @@ export function GameEditor({
                     aria-describedby={!existing ? "catalog-status" : undefined}
                     onChange={(e) => {
                       change("title", e.target.value);
+                      setCatalogSelected(false);
                       const nextQuery = e.target.value.trim();
                       if (nextQuery !== query) {
                         setResults([]);
@@ -255,7 +271,7 @@ export function GameEditor({
                 <div
                   className="catalog-results"
                   role="region"
-                  aria-label="Catalog results"
+                  aria-label={popular ? "Popular games" : "Catalog results"}
                 >
                   {results.map((item) => (
                     <button
@@ -270,7 +286,7 @@ export function GameEditor({
                           genres: item.genres,
                         }));
                         setResults([]);
-                        setQuery("");
+                        setCatalogSelected(true);
                         setSearchStatus(
                           "Title selected. Add any details below.",
                         );
